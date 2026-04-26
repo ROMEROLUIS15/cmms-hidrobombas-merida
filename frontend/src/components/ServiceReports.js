@@ -1,22 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { 
-  ClipboardList, 
-  Search, 
-  Calendar, 
-  User, 
-  Building2,
-  Settings,
-  FileText,
-  Filter,
-  Eye,
-  Download,
-  Wrench
+import {
+  ClipboardList, Search, Calendar, User, Building2,
+  Settings, FileText, Filter, Eye, Download, Wrench
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -25,34 +16,38 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ServiceReports = ({ user }) => {
-  const [reports, setReports] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [equipment, setEquipment] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all'); // all, technical, monthly, eventual
-  const [filterStatus, setFilterStatus] = useState('all'); // all, completed, pending
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedReportDetails, setSelectedReportDetails] = useState(null);
+  const [reports, setReports]                       = useState([]);
+  const [loading, setLoading]                       = useState(true);
+  const [searchTerm, setSearchTerm]                 = useState('');
+  const [filterType, setFilterType]                 = useState('all');
+  const [showDetailsModal, setShowDetailsModal]     = useState(false);
+  const [selectedReport, setSelectedReport]         = useState(null);
 
-  useEffect(() => {
-    loadReportsData();
-  }, []);
+  useEffect(() => { loadReports(); }, []);
 
-  const loadReportsData = async () => {
+  // ── Data fetching ───────────────────────────────────────────────────────────
+  const loadReports = async () => {
     try {
       setLoading(true);
-      const [reportsResponse, clientsResponse, equipmentResponse] = await Promise.all([
-        axios.get(`${API}/service-reports`),
-        axios.get(`${API}/clients`),
-        axios.get(`${API}/equipment`)
-      ]);
-      
-      setReports(reportsResponse.data);
-      setClients(clientsResponse.data);
-      setEquipment(equipmentResponse.data);
-    } catch (error) {
-      console.error('Error loading reports data:', error);
+      const res = await axios.get(`${API}/service-reports`);
+      const raw = res.data?.data || res.data || [];
+
+      const parse = (v) => {
+        if (!v) return null;
+        if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
+        return v;
+      };
+
+      const parsed = raw.map(r => ({
+        ...r,
+        waterEnergyData: parse(r.waterEnergyData),
+        motorsData:      parse(r.motorsData),
+        controlData:     parse(r.controlData),
+      }));
+
+      setReports(parsed);
+    } catch (err) {
+      console.error('Error loading reports:', err);
       toast.error('Error al cargar los reportes');
     } finally {
       setLoading(false);
@@ -61,150 +56,106 @@ const ServiceReports = ({ user }) => {
 
   const handleViewDetails = async (reportId) => {
     try {
-      const response = await axios.get(`${API}/reports/${reportId}/details`);
-      setSelectedReportDetails(response.data);
+      const res = await axios.get(`${API}/service-reports/${reportId}`);
+      const raw = res.data?.data || res.data;
+
+      // SQLite stores JSON columns as strings — parse them if needed
+      const parse = (v) => {
+        if (!v) return null;
+        if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
+        return v;
+      };
+
+      setSelectedReport({
+        ...raw,
+        waterEnergyData: parse(raw.waterEnergyData),
+        motorsData:      parse(raw.motorsData),
+        controlData:     parse(raw.controlData),
+      });
       setShowDetailsModal(true);
-    } catch (error) {
-      console.error('Error loading report details:', error);
+    } catch (err) {
       toast.error('Error al cargar los detalles del reporte');
     }
   };
 
   const handleDownloadPDF = async (reportId, reportNumber) => {
+    const toastId = toast.loading('Generando PDF...');
     try {
-      toast.info('Generando PDF...');
-      const response = await axios.get(`${API}/reports/${reportId}/pdf`, {
-        responseType: 'blob'
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/service-reports/${reportId}/pdf`, {
+        responseType: 'blob',
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // Create blob link to download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
-      link.href = url;
+      link.href  = url;
       link.setAttribute('download', `reporte_${reportNumber || reportId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
-      toast.success('PDF descargado exitosamente');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error('Error al descargar el PDF');
+
+      toast.success('PDF descargado exitosamente', { id: toastId });
+    } catch (err) {
+      console.error('Error PDF:', err);
+      toast.error('Error al generar el PDF', { id: toastId });
     }
   };
 
-  const getClientName = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
-    return client ? client.name : 'Cliente desconocido';
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const formatDate = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const getEquipmentName = (equipmentId) => {
-    const eq = equipment.find(e => e.id === equipmentId);
-    return eq ? eq.name : 'Equipo desconocido';
+  const visitLabel = { mensual: 'Mensual', eventual: 'Eventual', technical: 'Técnica' };
+  const visitColor = {
+    mensual:   'bg-green-100 text-green-800 border-green-200',
+    eventual:  'bg-orange-100 text-orange-800 border-orange-200',
+    technical: 'bg-blue-100 text-blue-800 border-blue-200',
   };
 
-  const getEquipmentLocation = (equipmentId) => {
-    const eq = equipment.find(e => e.id === equipmentId);
-    return eq ? eq.location : '';
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getVisitTypeLabel = (type) => {
-    const labels = {
-      technical: 'Técnica',
-      monthly: 'Mensual',
-      eventual: 'Eventual'
-    };
-    return labels[type] || type;
-  };
-
-  const getVisitTypeBadge = (type) => {
-    const badges = {
-      technical: 'bg-blue-100 text-blue-800 border-blue-200',
-      monthly: 'bg-green-100 text-green-800 border-green-200',
-      eventual: 'bg-orange-100 text-orange-800 border-orange-200'
-    };
-    return badges[type] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      completed: 'status-active',
-      pending: 'status-pending',
-      cancelled: 'status-inactive'
-    };
-    return badges[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusLabel = (status) => {
-    const labels = {
-      completed: 'Completado',
-      pending: 'Pendiente',
-      cancelled: 'Cancelado'
-    };
-    return labels[status] || status;
-  };
-
-  // Filter reports
-  const filteredReports = reports.filter(report => {
-    const matchesSearch = 
-      report.report_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getClientName(report.client_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getEquipmentName(report.equipment_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (report.observations && report.observations.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesType = filterType === 'all' || report.visit_type === filterType;
-    const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+  // ── Filtering ────────────────────────────────────────────────────────────────
+  const filtered = reports.filter(r => {
+    const clientName = r.equipment?.client?.name || '';
+    const equipName  = r.equipment?.name || '';
+    const num        = r.reportNumber || '';
+    const obs        = r.observations || '';
+    const matchSearch = [num, clientName, equipName, obs]
+      .some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchType = filterType === 'all' || r.visitType === filterType;
+    return matchSearch && matchType;
   });
 
-  // Sort reports by date (newest first)
-  const sortedReports = filteredReports.sort((a, b) => 
-    new Date(b.service_date) - new Date(a.service_date)
+  const sorted = [...filtered].sort(
+    (a, b) => new Date(b.reportDate || b.createdAt) - new Date(a.reportDate || a.createdAt)
   );
 
+  // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-            ))}
-          </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded-lg" />
+          ))}
         </div>
       </div>
     );
   }
 
+  // ── Main render ──────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-7xl mx-auto animate-fade-in" data-testid="service-reports">
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Reportes de Servicio
-          </h1>
-          <p className="text-slate-600">
-            {user?.role === 'client' 
-              ? 'Historial de mantenimientos de tus equipos'
-              : 'Historial completo de servicios realizados'
-            }
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-1">Reportes de Servicio</h1>
+          <p className="text-slate-600">Historial completo de mantenimientos realizados</p>
         </div>
-        
         {['admin', 'supervisor', 'technician'].includes(user?.role) && (
           <Link to="/service-form">
             <Button className="btn-primary" data-testid="new-report-button">
@@ -215,213 +166,172 @@ const ServiceReports = ({ user }) => {
         )}
       </div>
 
-      {/* Filters and Search */}
-      <div className="mb-6 space-y-4">
-        {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Buscar reportes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              data-testid="reports-search-input"
-            />
-          </div>
+      {/* Filters */}
+      <div className="mb-6 space-y-3">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Buscar por N°, cliente, equipo u observaciones..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="reports-search-input"
+          />
         </div>
-        
-        {/* Filter buttons */}
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-700">Tipo:</span>
-            <div className="flex space-x-1">
-              {[
-                { value: 'all', label: 'Todos' },
-                { value: 'technical', label: 'Técnica' },
-                { value: 'monthly', label: 'Mensual' },
-                { value: 'eventual', label: 'Eventual' }
-              ].map((filter) => (
-                <Button
-                  key={filter.value}
-                  variant={filterType === filter.value ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterType(filter.value)}
-                  className="text-xs"
-                  data-testid={`filter-type-${filter.value}`}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-slate-700">Estado:</span>
-            <div className="flex space-x-1">
-              {[
-                { value: 'all', label: 'Todos' },
-                { value: 'completed', label: 'Completados' },
-                { value: 'pending', label: 'Pendientes' }
-              ].map((filter) => (
-                <Button
-                  key={filter.value}
-                  variant={filterStatus === filter.value ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterStatus(filter.value)}
-                  className="text-xs"
-                  data-testid={`filter-status-${filter.value}`}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-slate-500" />
+          <span className="text-sm font-medium text-slate-700">Tipo:</span>
+          {[
+            { value: 'all',       label: 'Todos'    },
+            { value: 'mensual',   label: 'Mensual'  },
+            { value: 'eventual',  label: 'Eventual' },
+            { value: 'technical', label: 'Técnica'  },
+          ].map(f => (
+            <Button
+              key={f.value}
+              variant={filterType === f.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType(f.value)}
+              className="text-xs"
+              data-testid={`filter-type-${f.value}`}
+            >
+              {f.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Reports List */}
-      {sortedReports.length > 0 ? (
+      {/* Stats bar */}
+      {reports.length > 0 && (
+        <div className="mb-6 p-4 bg-slate-50 rounded-lg" data-testid="reports-stats">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-center">
+            <div>
+              <p className="font-bold text-slate-900 text-lg">{reports.length}</p>
+              <p className="text-slate-500">Total</p>
+            </div>
+            <div>
+              <p className="font-bold text-green-600 text-lg">
+                {reports.filter(r => r.visitType === 'mensual').length}
+              </p>
+              <p className="text-slate-500">Mensuales</p>
+            </div>
+            <div>
+              <p className="font-bold text-orange-600 text-lg">
+                {reports.filter(r => r.visitType === 'eventual').length}
+              </p>
+              <p className="text-slate-500">Eventuales</p>
+            </div>
+            <div>
+              <p className="font-bold text-blue-600 text-lg">
+                {reports.filter(r => r.visitType === 'technical').length}
+              </p>
+              <p className="text-slate-500">Técnicas</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reports list */}
+      {sorted.length > 0 ? (
         <div className="space-y-4" data-testid="reports-list">
-          {sortedReports.map((report) => (
+          {sorted.map((report) => (
             <Card key={report.id} className="technical-card hover-card" data-testid={`report-card-${report.id}`}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                          <ClipboardList className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-900">
-                            {report.report_number}
-                          </h3>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getVisitTypeBadge(report.visit_type)}`}>
-                              {getVisitTypeLabel(report.visit_type)}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(report.status)}`}>
-                              {getStatusLabel(report.status)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-slate-900">
-                          {formatDate(report.service_date)}
-                        </p>
-                      </div>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+
+                  {/* Icon */}
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <ClipboardList className="w-6 h-6 text-white" />
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title row */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-base font-semibold text-slate-900">
+                        {report.reportNumber || 'SRV-????'}
+                      </h3>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${visitColor[report.visitType] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                        {visitLabel[report.visitType] || report.visitType}
+                      </span>
+                      {report.systemName && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">
+                          {report.systemName}
+                        </span>
+                      )}
                     </div>
-                    
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center space-x-3">
-                        <Building2 className="w-4 h-4 text-slate-400" />
+
+                    {/* Meta grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wide">Cliente</p>
-                          <p className="text-sm font-medium text-slate-900">
-                            {getClientName(report.client_id)}
+                          <p className="text-xs text-slate-400 uppercase">Cliente</p>
+                          <p className="text-sm font-medium text-slate-800">
+                            {report.equipment?.client?.name || '—'}
                           </p>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <Settings className="w-4 h-4 text-slate-400" />
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wide">Equipo</p>
-                          <p className="text-sm font-medium text-slate-900">
-                            {getEquipmentName(report.equipment_id)}
+                          <p className="text-xs text-slate-400 uppercase">Equipo</p>
+                          <p className="text-sm font-medium text-slate-800">
+                            {report.equipment?.name || '—'}
                           </p>
-                          {getEquipmentLocation(report.equipment_id) && (
-                            <p className="text-xs text-slate-500">
-                              {getEquipmentLocation(report.equipment_id)}
-                            </p>
-                          )}
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <User className="w-4 h-4 text-slate-400" />
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <div>
-                          <p className="text-xs text-slate-500 uppercase tracking-wide">Técnico</p>
-                          <p className="text-sm font-medium text-slate-900">
-                            {report.technician_id === user?.id ? 'Tú' : 'Técnico'}
+                          <p className="text-xs text-slate-400 uppercase">Fecha</p>
+                          <p className="text-sm font-medium text-slate-800">
+                            {formatDate(report.reportDate)}
                           </p>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Observations Preview */}
+
+                    {/* Data badges */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {report.waterEnergyData && (
+                        <Badge variant="outline" className="text-xs">
+                          <Wrench className="w-3 h-3 mr-1" />Agua/Energía
+                        </Badge>
+                      )}
+                      {report.motorsData && report.motorsData.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Settings className="w-3 h-3 mr-1" />{report.motorsData.length} Motor(es)
+                        </Badge>
+                      )}
+                      {report.controlData && (
+                        <Badge variant="outline" className="text-xs">
+                          <Wrench className="w-3 h-3 mr-1" />Control
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Observations preview */}
                     {report.observations && (
-                      <div className="mb-4">
-                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Observaciones</p>
-                        <p className="text-sm text-slate-700 line-clamp-2">
-                          {report.observations}
-                        </p>
-                      </div>
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-3">{report.observations}</p>
                     )}
-                    
-                    {/* Technical Data Summary */}
-                    <div className="mb-4">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Datos Registrados</p>
-                      <div className="flex flex-wrap gap-2">
-                        {report.water_energy_data && (
-                          <Badge variant="outline" className="text-xs">
-                            <Wrench className="w-3 h-3 mr-1" />
-                            Agua/Energía
-                          </Badge>
-                        )}
-                        {report.motor_1_data && (
-                          <Badge variant="outline" className="text-xs">
-                            <Settings className="w-3 h-3 mr-1" />
-                            Motor 1
-                          </Badge>
-                        )}
-                        {report.motor_2_data && (
-                          <Badge variant="outline" className="text-xs">
-                            <Settings className="w-3 h-3 mr-1" />
-                            Motor 2
-                          </Badge>
-                        )}
-                        {report.motor_3_data && (
-                          <Badge variant="outline" className="text-xs">
-                            <Settings className="w-3 h-3 mr-1" />
-                            Motor 3
-                          </Badge>
-                        )}
-                        {report.control_peripherals_data && (
-                          <Badge variant="outline" className="text-xs">
-                            <Wrench className="w-3 h-3 mr-1" />
-                            Control
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
+
                     {/* Actions */}
-                    <div className="flex items-center justify-end space-x-2 pt-4 border-t border-slate-100">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs"
+                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                      <Button
+                        variant="outline" size="sm" className="text-xs"
                         onClick={() => handleViewDetails(report.id)}
                         data-testid={`view-report-${report.id}`}
                       >
-                        <Eye className="w-3 h-3 mr-1" />
-                        Ver Detalles
+                        <Eye className="w-3 h-3 mr-1" />Ver Detalles
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => handleDownloadPDF(report.id, report.report_number)}
+                      <Button
+                        variant="outline" size="sm" className="text-xs"
+                        onClick={() => handleDownloadPDF(report.id, report.reportNumber)}
                         data-testid={`download-report-${report.id}`}
                       >
-                        <Download className="w-3 h-3 mr-1" />
-                        Descargar PDF
+                        <Download className="w-3 h-3 mr-1" />PDF
                       </Button>
                     </div>
                   </div>
@@ -431,23 +341,13 @@ const ServiceReports = ({ user }) => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12" data-testid="no-reports-message">
-          {searchTerm || filterType !== 'all' || filterStatus !== 'all' ? (
+        <div className="text-center py-16" data-testid="no-reports-message">
+          {searchTerm || filterType !== 'all' ? (
             <>
-              <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                No se encontraron reportes
-              </h3>
-              <p className="text-slate-600 mb-4">
-                No hay reportes que coincidan con los filtros aplicados
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterType('all');
-                  setFilterStatus('all');
-                }}
+              <Search className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">Sin resultados</h3>
+              <p className="text-slate-500 mb-4">No hay reportes que coincidan con los filtros</p>
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setFilterType('all'); }}
                 data-testid="clear-filters-button"
               >
                 Limpiar filtros
@@ -455,240 +355,152 @@ const ServiceReports = ({ user }) => {
             </>
           ) : (
             <>
-              <ClipboardList className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                {user?.role === 'client' 
-                  ? 'No tienes reportes de servicio'
-                  : 'No hay reportes registrados'
-                }
-              </h3>
-              <p className="text-slate-600 mb-6">
-                {user?.role === 'client'
-                  ? 'Los reportes de mantenimiento aparecerán aquí cuando se realicen servicios'
-                  : 'Comienza creando el primer reporte de servicio'
-                }
-              </p>
-              {['admin', 'supervisor', 'technician'].includes(user?.role) && (
-                <Link to="/service-form">
-                  <Button className="btn-primary" data-testid="create-first-report-button">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Crear Primer Reporte
-                  </Button>
-                </Link>
-              )}
+              <ClipboardList className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">No hay reportes registrados</h3>
+              <p className="text-slate-500 mb-6">Crea el primer reporte de mantenimiento</p>
+              <Link to="/service-form">
+                <Button className="btn-primary" data-testid="create-first-report-button">
+                  <FileText className="w-4 h-4 mr-2" />Crear Primer Reporte
+                </Button>
+              </Link>
             </>
           )}
         </div>
       )}
 
-      {/* Stats Footer */}
-      {reports.length > 0 && (
-        <div className="mt-8 p-4 bg-slate-50 rounded-lg" data-testid="reports-stats">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-            <div className="text-center">
-              <p className="font-semibold text-slate-900">{reports.length}</p>
-              <p className="text-slate-600">Total Reportes</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold text-green-600">
-                {reports.filter(r => r.status === 'completed').length}
-              </p>
-              <p className="text-slate-600">Completados</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold text-blue-600">
-                {reports.filter(r => r.visit_type === 'technical').length}
-              </p>
-              <p className="text-slate-600">Técnicos</p>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold text-purple-600">
-                {reports.filter(r => r.visit_type === 'monthly').length}
-              </p>
-              <p className="text-slate-600">Mensuales</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Detalles del Reporte */}
+      {/* ── Detail Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-slate-900">
+            <DialogTitle className="text-xl font-bold text-slate-900">
               Detalles del Reporte
             </DialogTitle>
             <DialogDescription>
-              Información completa del reporte de servicio
+              {selectedReport?.reportNumber} · {formatDate(selectedReport?.reportDate)}
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedReportDetails && (
-            <div className="space-y-6">
+
+          {selectedReport && (
+            <div className="space-y-4 mt-2">
+
               {/* Información General */}
               <div className="bg-slate-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-slate-900 mb-3">Información General</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-600">Número de Reporte</p>
-                    <p className="font-semibold">{selectedReportDetails.report.report_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Fecha de Servicio</p>
-                    <p className="font-semibold">
-                      {new Date(selectedReportDetails.report.service_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Estado</p>
-                    <Badge variant={selectedReportDetails.report.status === 'completed' ? 'success' : 'warning'}>
-                      {selectedReportDetails.report.status === 'completed' ? 'Completado' : 'Pendiente'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Tipo de Visita</p>
-                    <p className="font-semibold capitalize">{selectedReportDetails.report.visit_type}</p>
-                  </div>
+                <h3 className="font-semibold text-slate-800 mb-3">Información General</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div><p className="text-slate-400 text-xs">N° Reporte</p><p className="font-semibold">{selectedReport.reportNumber || '—'}</p></div>
+                  <div><p className="text-slate-400 text-xs">Fecha</p><p className="font-semibold">{formatDate(selectedReport.reportDate)}</p></div>
+                  <div><p className="text-slate-400 text-xs">Tipo</p><p className="font-semibold">{visitLabel[selectedReport.visitType] || selectedReport.visitType}</p></div>
+                  <div><p className="text-slate-400 text-xs">Sistema</p><p className="font-semibold">{selectedReport.systemName || '—'}</p></div>
                 </div>
               </div>
 
-              {/* Cliente */}
-              {selectedReportDetails.client && (
+              {/* Equipo / Cliente */}
+              {selectedReport.equipment && (
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Cliente</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="font-semibold text-slate-800 mb-3">Equipo / Cliente</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div><p className="text-slate-400 text-xs">Equipo</p><p className="font-semibold">{selectedReport.equipment.name}</p></div>
+                    <div><p className="text-slate-400 text-xs">Cliente</p><p className="font-semibold">{selectedReport.equipment.client?.name || '—'}</p></div>
                     <div>
-                      <p className="text-sm text-slate-600">Nombre</p>
-                      <p className="font-semibold">{selectedReportDetails.client.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Email</p>
-                      <p className="font-semibold">{selectedReportDetails.client.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Teléfono</p>
-                      <p className="font-semibold">{selectedReportDetails.client.phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Dirección</p>
-                      <p className="font-semibold">{selectedReportDetails.client.address}</p>
+                      <p className="text-slate-400 text-xs">Técnico</p>
+                      <p className="font-semibold">
+                        {selectedReport.technician?.username || selectedReport.technicianName || '—'}
+                      </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Equipo */}
-              {selectedReportDetails.equipment && (
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Equipo</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-slate-600">Nombre</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Tipo</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.equipment_type}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Marca</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.brand || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Modelo</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.model || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Ubicación</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.location}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Código QR</p>
-                      <p className="font-semibold">{selectedReportDetails.equipment.qr_code}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Técnico */}
-              {selectedReportDetails.technician && (
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Técnico Responsable</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-slate-600">Nombre</p>
-                      <p className="font-semibold">{selectedReportDetails.technician.full_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Email</p>
-                      <p className="font-semibold">{selectedReportDetails.technician.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Rol</p>
-                      <Badge>{selectedReportDetails.technician.role}</Badge>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Datos Técnicos */}
-              {selectedReportDetails.report.water_energy_data && (
+              {/* Agua / Energía */}
+              {selectedReport.waterEnergyData && (
                 <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Datos de Agua y Energía</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <h3 className="font-semibold text-slate-800 mb-3">Agua / Energía</h3>
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+                    {[
+                      ['R-S', selectedReport.waterEnergyData.voltage_r_s],
+                      ['R-N', selectedReport.waterEnergyData.voltage_r_n],
+                      ['S-T', selectedReport.waterEnergyData.voltage_s_t],
+                      ['S-N', selectedReport.waterEnergyData.voltage_s_n],
+                      ['T-R', selectedReport.waterEnergyData.voltage_t_r],
+                      ['T-N', selectedReport.waterEnergyData.voltage_t_n],
+                    ].map(([lbl, val]) => val ? (
+                      <div key={lbl}>
+                        <p className="text-slate-400 text-xs">Voltaje {lbl}</p>
+                        <p className="font-semibold">{val} V</p>
+                      </div>
+                    ) : null)}
                     <div>
-                      <p className="text-sm text-slate-600">Voltaje R-S</p>
-                      <p className="font-semibold">
-                        {selectedReportDetails.report.water_energy_data.voltage_r_s || 'N/A'} V
-                      </p>
+                      <p className="text-slate-400 text-xs">Nivel Agua</p>
+                      <p className="font-semibold capitalize">{selectedReport.waterEnergyData.water_level || '—'}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Voltaje S-T</p>
-                      <p className="font-semibold">
-                        {selectedReportDetails.report.water_energy_data.voltage_s_t || 'N/A'} V
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Voltaje T-R</p>
-                      <p className="font-semibold">
-                        {selectedReportDetails.report.water_energy_data.voltage_t_r || 'N/A'} V
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Nivel de Agua</p>
-                      <Badge variant={
-                        selectedReportDetails.report.water_energy_data.water_level === 'full' ? 'success' :
-                        selectedReportDetails.report.water_energy_data.water_level === 'medium' ? 'warning' : 'destructive'
-                      }>
-                        {selectedReportDetails.report.water_energy_data.water_level}
-                      </Badge>
-                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Motores */}
+              {selectedReport.motorsData && selectedReport.motorsData.length > 0 && (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-slate-800 mb-3">Motores</h3>
+                  <div className="space-y-3">
+                    {selectedReport.motorsData.map((motor, i) => (
+                      <div key={i}>
+                        <p className="text-xs font-semibold text-slate-600 mb-1">Motor {i + 1}</p>
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
+                          {motor.motor_hp  && <div><p className="text-slate-400 text-xs">HP</p><p className="font-semibold">{motor.motor_hp}</p></div>}
+                          {motor.amperage  && <div><p className="text-slate-400 text-xs">In (A)</p><p className="font-semibold">{motor.amperage}</p></div>}
+                          {motor.phase_r   && <div><p className="text-slate-400 text-xs">R (A)</p><p className="font-semibold">{motor.phase_r}</p></div>}
+                          {motor.phase_s   && <div><p className="text-slate-400 text-xs">S (A)</p><p className="font-semibold">{motor.phase_s}</p></div>}
+                          {motor.phase_t   && <div><p className="text-slate-400 text-xs">T (A)</p><p className="font-semibold">{motor.phase_t}</p></div>}
+                          {motor.motor_temp && <div><p className="text-slate-400 text-xs">T° Motor</p><p className="font-semibold">{motor.motor_temp}°C</p></div>}
+                          {motor.voluta_temp && <div><p className="text-slate-400 text-xs">T° Voluta</p><p className="font-semibold">{motor.voluta_temp}°C</p></div>}
+                          {motor.bobina_value && <div><p className="text-slate-400 text-xs">Bobina</p><p className="font-semibold">{motor.bobina_value}</p></div>}
+                          {motor.contactos_value && <div><p className="text-slate-400 text-xs">Contactos</p><p className="font-semibold">{motor.contactos_value}</p></div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* Observaciones */}
-              {selectedReportDetails.report.observations && (
+              {selectedReport.observations && (
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Observaciones</h3>
-                  <p className="text-slate-700">{selectedReportDetails.report.observations}</p>
+                  <h3 className="font-semibold text-slate-800 mb-2">Observaciones</h3>
+                  <p className="text-slate-700 text-sm">{selectedReport.observations}</p>
                 </div>
               )}
 
-              {/* Botón para generar PDF desde el modal */}
-              <div className="flex justify-end pt-4 border-t">
-                <Button 
-                  onClick={() => handleDownloadPDF(selectedReportDetails.report.id, selectedReportDetails.report.report_number)}
+              {/* Firmas */}
+              {(selectedReport.technicianName || selectedReport.clientSignatureName) && (
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-slate-800 mb-3">Firmas</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-400 text-xs">Técnico</p>
+                      <p className="font-semibold">{selectedReport.technicianName || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs">Cliente</p>
+                      <p className="font-semibold">{selectedReport.clientSignatureName || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Acciones */}
+              <div className="flex justify-end pt-2 border-t">
+                <Button
+                  onClick={() => handleDownloadPDF(selectedReport.id, selectedReport.reportNumber)}
                   className="btn-primary"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Descargar PDF
+                  <Download className="w-4 h-4 mr-2" />Descargar PDF
                 </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

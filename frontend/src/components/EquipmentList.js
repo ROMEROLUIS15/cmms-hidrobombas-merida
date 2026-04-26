@@ -177,7 +177,7 @@ const EquipmentList = ({ user }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 text-gradient">
             Gestión de Equipos
           </h1>
           <p className="text-slate-600">
@@ -370,7 +370,7 @@ const EquipmentList = ({ user }) => {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
                       {getEquipmentIcon(eq.equipment_type)}
                     </div>
                     <div className="flex-1">

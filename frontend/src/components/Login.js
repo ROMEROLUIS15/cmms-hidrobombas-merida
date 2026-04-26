@@ -48,8 +48,8 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
           remember_me: formData.remember_me
         });
         
-        // Store both access and refresh tokens
-        onLogin(response.data.user, response.data.access_token, response.data.refresh_token);
+        // Store token
+        onLogin(response.data.user, response.data.token);
         toast.success('¡Bienvenido al sistema CMMS!');
       } else {
         await axios.post(`${API}/auth/register`, {
@@ -71,7 +71,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
         });
       }
     } catch (error) {
-      const message = error.response?.data?.detail || 'Error en la autenticación';
+      const message = error.response?.data?.message || error.response?.data?.detail || 'Error en la autenticación';
       setError(message);
       toast.error(message);
     } finally {
@@ -458,29 +458,15 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
             {isLogin && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-700 font-medium mb-2">
-                  Credenciales de demostración:
+                  Credenciales de prueba:
                 </p>
                 <div className="space-y-1 text-xs text-blue-600">
                   <div>
-                    <strong>Super Admin:</strong> admin@hidrobombas.com / Admin2024!Hidro
+                    <strong>Admin:</strong> admin@hidrobombas.com / Admin1234!
                   </div>
                   <div>
-                    <strong>Admin:</strong> admin@cmms.com / admin123
+                    <strong>Técnico:</strong> tecnico@hidrobombas.com / Tecnico1234!
                   </div>
-                  <div>
-                    <strong>Técnico:</strong> tecnico@cmms.com / tecnico123
-                  </div>
-                  <div>
-                    <strong>Cliente:</strong> cliente@empresa.com / cliente123
-                  </div>
-                </div>
-                <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                  <p className="text-xs text-green-700">
-                    ✅ <strong>Sistema totalmente funcional</strong><br />
-                    • Registro con cualquier email real<br />
-                    • Verificación por email automática<br />
-                    • Recuperación de contraseña funcional
-                  </p>
                 </div>
               </div>
             )}

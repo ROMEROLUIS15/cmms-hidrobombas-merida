@@ -82,13 +82,13 @@ const Navigation = ({ user, onLogout }) => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
-              <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+            <div className="flex items-center shrink-0 min-w-0">
+              <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity min-w-0">
+                <div className="flex items-center justify-center w-10 h-10 shrink-0 bg-gradient-to-br from-primary to-secondary rounded-xl shadow-lg shadow-primary/20">
                   <Wrench className="w-5 h-5 text-white" />
                 </div>
                 <div className="hidden sm:block">
@@ -114,7 +114,7 @@ const Navigation = ({ user, onLogout }) => {
                     to={item.path}
                     className={`nav-link flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                     data-testid={`nav-${item.path.replace('/', '')}`}
@@ -164,10 +164,10 @@ const Navigation = ({ user, onLogout }) => {
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 variant="ghost"
                 size="sm"
-                className="md:hidden"
+                className="md:hidden text-slate-700 hover:text-slate-900 shrink-0"
                 data-testid="mobile-menu-button"
               >
-                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </Button>
             </div>
           </div>
@@ -175,7 +175,7 @@ const Navigation = ({ user, onLogout }) => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg">
+          <div className="md:hidden glass-dark bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-2xl">
             <div className="px-4 py-3 space-y-1">
               {/* User Info Mobile */}
               <div className="flex items-center space-x-3 px-3 py-2 mb-3 bg-slate-50 rounded-lg" data-testid="mobile-user-info">
@@ -206,8 +206,8 @@ const Navigation = ({ user, onLogout }) => {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center space-x-3 px-3 py-3 rounded-lg font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50/50'
                     }`}
                     data-testid={`mobile-nav-${item.path.replace('/', '')}`}
                   >

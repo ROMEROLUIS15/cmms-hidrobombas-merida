@@ -40,7 +40,7 @@ const ForgotPassword = () => {
         toast.info(data.message);
       }
     } catch (error) {
-      const message = error.response?.data?.detail || 'Error al enviar email de recuperación';
+      const message = error.response?.data?.message || error.response?.data?.detail || 'Error al enviar email de recuperación';
       setError(message);
       toast.error(message);
     } finally {

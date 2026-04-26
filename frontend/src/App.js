@@ -15,6 +15,7 @@ import EquipmentList from './components/EquipmentList';
 import ServiceReports from './components/ServiceReports';
 import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/sonner';
+import OfflineBanner from './components/OfflineBanner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -97,6 +98,7 @@ function App() {
   if (!user) {
     return (
       <BrowserRouter>
+        <OfflineBanner />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
@@ -114,6 +116,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <OfflineBanner />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <Navigation user={user} onLogout={handleLogout} />
         <main className="pt-16">
@@ -124,6 +127,7 @@ function App() {
             <Route path="/service-form/:equipmentId" element={<ServiceForm user={user} />} />
             <Route path="/clients" element={<ClientList user={user} />} />
             <Route path="/equipment" element={<EquipmentList user={user} />} />
+            <Route path="/service-reports" element={<ServiceReports user={user} />} />
             <Route path="/reports" element={<ServiceReports user={user} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

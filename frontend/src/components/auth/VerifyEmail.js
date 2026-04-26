@@ -45,7 +45,7 @@ const VerifyEmail = () => {
       }, 3000);
       
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Error al verificar el email';
+      const errorMessage = error.response?.data?.message || error.response?.data?.detail || 'Error al verificar el email';
       setStatus('error');
       setMessage(errorMessage);
       
@@ -71,7 +71,7 @@ const VerifyEmail = () => {
       toast.success('Nuevo enlace de verificación enviado a tu email');
       setResendEmail('');
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Error al enviar el email';
+      const errorMessage = error.response?.data?.message || error.response?.data?.detail || 'Error al enviar el email';
       toast.error(errorMessage);
     } finally {
       setResendLoading(false);

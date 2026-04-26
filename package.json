@@ -1,0 +1,21 @@
+{
+  "name": "cmms-hidrobombas-merida",
+  "version": "1.0.0",
+  "description": "CMMS Monorepo Root",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "jest": "^27.5.1",
+    "supertest": "^7.2.2"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
+}

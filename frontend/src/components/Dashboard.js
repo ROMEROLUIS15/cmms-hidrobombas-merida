@@ -97,7 +97,7 @@ const Dashboard = ({ user }) => {
         title: 'Total Clientes',
         value: stats?.total_clients || 0,
         icon: Building2,
-        color: 'from-blue-500 to-indigo-600',
+        color: 'from-primary to-secondary',
         change: '+12%',
         testId: 'total-clients-stat'
       },
@@ -105,7 +105,7 @@ const Dashboard = ({ user }) => {
         title: 'Equipos Registrados',
         value: stats?.total_equipment || 0,
         icon: Settings,
-        color: 'from-green-500 to-emerald-600',
+        color: 'from-secondary to-primary',
         change: '+8%',
         testId: 'total-equipment-stat'
       },
@@ -175,22 +175,22 @@ const Dashboard = ({ user }) => {
     <div className="p-6 max-w-7xl mx-auto animate-fade-in" data-testid="dashboard">
       {/* Welcome Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2" data-testid="welcome-message">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2 break-words" data-testid="welcome-message">
               {getWelcomeMessage()} {user?.full_name}
             </h1>
-            <p className="text-slate-600">
+            <p className="text-sm sm:text-base text-slate-600">
               {user?.role === 'client' 
                 ? 'Gestiona el mantenimiento de tus equipos hidráulicos' 
                 : 'Resumen de actividades del sistema CMMS'
               }
             </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center w-full sm:w-auto">
             {user?.role !== 'client' && (
-              <Link to="/service-form">
-                <Button className="btn-primary" data-testid="new-service-button">
+              <Link to="/service-form" className="w-full sm:w-auto">
+                <Button className="btn-primary w-full sm:w-auto" data-testid="new-service-button">
                   <FileText className="w-4 h-4 mr-2" />
                   Nuevo Servicio
                 </Button>
@@ -201,25 +201,25 @@ const Dashboard = ({ user }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {getRoleBasedStats().map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Card key={index} className="technical-card hover-card" data-testid={stat.testId}>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-600 mb-1 truncate">
                       {stat.title}
                     </p>
-                    <p className="text-3xl font-bold text-slate-900">
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">
                       {stat.value}
                     </p>
-                    <p className="text-sm text-green-600 font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-green-600 font-medium mt-1 truncate">
                       {stat.change} vs mes anterior
                     </p>
                   </div>
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg shadow-primary/20`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                 </div>
@@ -245,10 +245,10 @@ const Dashboard = ({ user }) => {
             {recentReports.length > 0 ? (
               <div className="space-y-4">
                 {recentReports.map((report) => (
-                  <div key={report.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-slate-900 text-sm">
+                  <div className="flex items-start justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                        <span className="font-medium text-slate-900 text-sm truncate">
                           {report.report_number}
                         </span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getVisitTypeBadge(report.visit_type)}`}>
@@ -305,21 +305,21 @@ const Dashboard = ({ user }) => {
             {recentEquipment.length > 0 ? (
               <div className="space-y-4">
                 {recentEquipment.map((equipment) => (
-                  <div key={equipment.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                  <div key={equipment.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors gap-2">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shrink-0">
                         <Wrench className="w-5 h-5 text-white" />
                       </div>
-                      <div>
-                        <p className="font-medium text-slate-900 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 text-sm truncate">
                           {equipment.name}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 truncate">
                           {equipment.location}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="text-xs text-slate-400">
                         {equipment.equipment_type}
                       </p>

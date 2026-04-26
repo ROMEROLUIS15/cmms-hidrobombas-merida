@@ -107,7 +107,7 @@ const ResetPassword = () => {
       }, 3000);
       
     } catch (error) {
-      const message = error.response?.data?.detail || 'Error al restablecer la contraseña';
+      const message = error.response?.data?.message || error.response?.data?.detail || 'Error al restablecer la contraseña';
       setError(message);
       toast.error(message);
       

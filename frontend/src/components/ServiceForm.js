@@ -34,101 +34,69 @@ const ServiceForm = ({ user }) => {
   const [equipment, setEquipment] = useState([]);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
   
-  // Form data state
+  // Form data state — mirrors all fields of the physical maintenance form
   const [formData, setFormData] = useState({
     client_id: '',
     equipment_id: equipmentId || '',
-    visit_type: 'technical',
+    visit_type: 'mensual',
+    system_name: '',
+    report_date: new Date().toISOString().split('T')[0],
+    technician_name: '',
+    client_signature_name: '',
     observations: '',
-    
-    // Water/Energy data
+
+    // ── Bloque 1: Agua / Energía ──────────────────────────────────────────
     water_energy_data: {
-      voltage_r_s: '',
-      voltage_s_t: '',
-      voltage_t_r: '',
-      voltage_r_n: '',
-      voltage_s_n: '',
-      voltage_t_n: '',
+      voltage_r_s: '', voltage_r_n: '',
+      voltage_s_t: '', voltage_s_n: '',
+      voltage_t_r: '', voltage_t_n: '',
       water_level: 'empty',
-      volts_min: '',
-      volts_max: '',
-      time_1: '',
-      time_2: '',
       float_contact_na: '',
-      led_empty_tank: false
+      float_contact_na_2: '',
+      led_empty_tank: false,
+      volts_min: '', volts_max: '',
+      time_1: '', time_2: ''
     },
-    
-    // Motor data (3 motors)
+
+    // ── Bloque 2: Motores (3 motores) ────────────────────────────────────
     motor_1_data: {
-      motor_hp: '',
-      amperage: '',
-      resistance_coil: '',
-      temperature_coil: '',
+      motor_hp: '', amperage: '',
+      phase_r: '', phase_s: '', phase_t: '',
+      bobina_value: '', contactos_value: '',
       contactor_working: false,
-      thermal_amp: '',
-      thermal_nc: false,
-      thermal_no: false,
-      motor_temp: '',
-      coil_temp: '',
-      thermal_temp: ''
+      thermal_amp: '', thermal_nc: false, thermal_no: false,
+      motor_temp: '', voluta_temp: '', thermal_temp: ''
     },
-    
     motor_2_data: {
-      motor_hp: '',
-      amperage: '',
-      resistance_coil: '',
-      temperature_coil: '',
+      motor_hp: '', amperage: '',
+      phase_r: '', phase_s: '', phase_t: '',
+      bobina_value: '', contactos_value: '',
       contactor_working: false,
-      thermal_amp: '',
-      thermal_nc: false,
-      thermal_no: false,
-      motor_temp: '',
-      coil_temp: '',
-      thermal_temp: ''
+      thermal_amp: '', thermal_nc: false, thermal_no: false,
+      motor_temp: '', voluta_temp: '', thermal_temp: ''
     },
-    
     motor_3_data: {
-      motor_hp: '',
-      amperage: '',
-      resistance_coil: '',
-      temperature_coil: '',
+      motor_hp: '', amperage: '',
+      phase_r: '', phase_s: '', phase_t: '',
+      bobina_value: '', contactos_value: '',
       contactor_working: false,
-      thermal_amp: '',
-      thermal_nc: false,
-      thermal_no: false,
-      motor_temp: '',
-      coil_temp: '',
-      thermal_temp: ''
+      thermal_amp: '', thermal_nc: false, thermal_no: false,
+      motor_temp: '', voluta_temp: '', thermal_temp: ''
     },
-    
-    // Control/Peripherals data
+
+    // ── Bloque 3: Control / Periféricos ──────────────────────────────────
     control_peripherals_data: {
-      breaker_tripolar_1: false,
-      breaker_tripolar_2: false,
-      breaker_tripolar_3: false,
-      breaker_control: false,
-      relay_alternator: false,
-      preset_work: false,
-      preset_emergency: false,
-      preset_compressor: false,
-      electrode_level: false,
-      valve_level: false,
-      safety_valve: false,
-      manometer: '',
-      work_pressure: '',
-      emergency_pressure: '',
-      compressor_oil: '',
-      compressor_belt: '',
-      pilot_lights: false,
-      switches: false,
-      timer: false,
-      valve_vents: false,
-      pump_1_on_minutes: '',
-      pump_1_rest_minutes: '',
-      pump_2_on_minutes: '',
-      pump_2_rest_minutes: '',
-      pump_1_noise_db: '',
-      pump_2_noise_db: ''
+      breaker_tripolar_1: '', breaker_tripolar_2: '', breaker_tripolar_3: '',
+      breaker_control: '',
+      relay_alternator: '', relay_control_level: '',
+      preset_work: '', preset_emergency: '', preset_compressor: '',
+      electrode_level: '', valve_level: '', safety_valve: '',
+      manometer: '', pressure_on: '', pressure_off: '',
+      compressor_oil: '', compressor_belt: '', valve_vents: '',
+      pilot_lights: '', switches: '', timer: '',
+      pump_1_on_minutes: '', pump_1_rest_minutes: '',
+      pump_2_on_minutes: '', pump_2_rest_minutes: '',
+      pump_1_noise_db: '', pump_2_noise_db: ''
     }
   });
 
@@ -144,13 +112,13 @@ const ServiceForm = ({ user }) => {
 
   const loadInitialData = async () => {
     try {
-      const [clientsResponse, equipmentResponse] = await Promise.all([
+      const [clientsRes, equipmentRes] = await Promise.all([
         axios.get(`${API}/clients`),
         axios.get(`${API}/equipment`)
       ]);
-      
-      setClients(clientsResponse.data);
-      setEquipment(equipmentResponse.data);
+      // New API returns { success, data: [...] }
+      setClients(clientsRes.data?.data || clientsRes.data || []);
+      setEquipment(equipmentRes.data?.data || equipmentRes.data || []);
     } catch (error) {
       console.error('Error loading initial data:', error);
       toast.error('Error al cargar datos iniciales');
@@ -160,11 +128,11 @@ const ServiceForm = ({ user }) => {
   const loadEquipmentDetails = async (id) => {
     try {
       const response = await axios.get(`${API}/equipment/${id}`);
-      const eq = response.data;
+      const eq = response.data?.data || response.data;
       setSelectedEquipment(eq);
       setFormData(prev => ({
         ...prev,
-        client_id: eq.client_id,
+        client_id: eq.clientId || eq.client_id || '',
         equipment_id: id
       }));
     } catch (error) {
@@ -196,7 +164,7 @@ const ServiceForm = ({ user }) => {
       setSelectedEquipment(eq);
       setFormData(prev => ({
         ...prev,
-        client_id: eq.client_id,
+        client_id: eq.clientId || eq.client_id || '',
         equipment_id: equipmentId
       }));
     }
@@ -306,13 +274,13 @@ const ServiceForm = ({ user }) => {
                   <SelectContent>
                     {equipment.map((eq) => (
                       <SelectItem key={eq.id} value={eq.id}>
-                        {eq.name} - {eq.location}
+                        {eq.name} {eq.client ? `— ${eq.client.name}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="visit_type">Tipo de Visita *</Label>
                 <Select
@@ -324,11 +292,31 @@ const ServiceForm = ({ user }) => {
                     <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="technical">Técnica</SelectItem>
-                    <SelectItem value="monthly">Mensual</SelectItem>
+                    <SelectItem value="mensual">Mensual</SelectItem>
                     <SelectItem value="eventual">Eventual</SelectItem>
+                    <SelectItem value="technical">Técnica</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="system_name">Sistema / Instalación</Label>
+                <Input
+                  id="system_name"
+                  placeholder="Ej: Sistema hidroneumático Torre A"
+                  value={formData.system_name}
+                  onChange={(e) => handleInputChange(null, 'system_name', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="report_date">Fecha del Reporte</Label>
+                <Input
+                  id="report_date"
+                  type="date"
+                  value={formData.report_date}
+                  onChange={(e) => handleInputChange(null, 'report_date', e.target.value)}
+                />
               </div>
             </div>
             
@@ -364,26 +352,26 @@ const ServiceForm = ({ user }) => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="water-energy" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="water-energy" className="flex items-center space-x-2" data-testid="water-energy-tab">
+              <TabsList className="flex w-full overflow-x-auto overflow-y-hidden pb-1 mb-4 justify-start sm:justify-center snap-x space-x-1 bg-slate-100/50 p-1 rounded-xl">
+                <TabsTrigger value="water-energy" className="flex items-center space-x-2 whitespace-nowrap snap-center min-h-[44px] px-4" data-testid="water-energy-tab">
                   <Droplets className="w-4 h-4" />
                   <span className="hidden sm:inline">Agua/Energía</span>
                 </TabsTrigger>
-                <TabsTrigger value="motor-1" className="flex items-center space-x-2" data-testid="motor-1-tab">
+                <TabsTrigger value="motor-1" className="flex items-center space-x-2 whitespace-nowrap snap-center min-h-[44px] px-4" data-testid="motor-1-tab">
                   <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Motor 1</span>
+                  <span>Motor 1</span>
                 </TabsTrigger>
-                <TabsTrigger value="motor-2" className="flex items-center space-x-2" data-testid="motor-2-tab">
+                <TabsTrigger value="motor-2" className="flex items-center space-x-2 whitespace-nowrap snap-center min-h-[44px] px-4" data-testid="motor-2-tab">
                   <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Motor 2</span>
+                  <span>Motor 2</span>
                 </TabsTrigger>
-                <TabsTrigger value="motor-3" className="flex items-center space-x-2" data-testid="motor-3-tab">
+                <TabsTrigger value="motor-3" className="flex items-center space-x-2 whitespace-nowrap snap-center min-h-[44px] px-4" data-testid="motor-3-tab">
                   <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Motor 3</span>
+                  <span>Motor 3</span>
                 </TabsTrigger>
-                <TabsTrigger value="control" className="flex items-center space-x-2" data-testid="control-tab">
+                <TabsTrigger value="control" className="flex items-center space-x-2 whitespace-nowrap snap-center min-h-[44px] px-4" data-testid="control-tab">
                   <Wrench className="w-4 h-4" />
-                  <span className="hidden sm:inline">Control</span>
+                  <span>Control</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -504,24 +492,35 @@ const ServiceForm = ({ user }) => {
                       </div>
                       
                       <div>
-                        <Label htmlFor="float_contact_na" className="text-sm">Contacto Flotante N/A</Label>
+                        <Label htmlFor="float_contact_na" className="text-sm">Contacto Flotante N/A #1</Label>
                         <Input
                           id="float_contact_na"
-                          placeholder="Estado del contacto"
+                          placeholder="Estado"
                           value={formData.water_energy_data.float_contact_na}
                           onChange={(e) => handleInputChange('water_energy_data', 'float_contact_na', e.target.value)}
                           data-testid="float-contact-input"
                         />
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
+
+                      <div>
+                        <Label htmlFor="float_contact_na_2" className="text-sm">Contacto Flotante N/A #2</Label>
+                        <Input
+                          id="float_contact_na_2"
+                          placeholder="Estado"
+                          value={formData.water_energy_data.float_contact_na_2}
+                          onChange={(e) => handleInputChange('water_energy_data', 'float_contact_na_2', e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="led_empty_tank" className="text-sm">LED Tanque Vacío</Label>
+                        <Input
                           id="led_empty_tank"
-                          checked={formData.water_energy_data.led_empty_tank}
-                          onCheckedChange={(checked) => handleInputChange('water_energy_data', 'led_empty_tank', checked)}
+                          placeholder="OK / Falla"
+                          value={formData.water_energy_data.led_empty_tank === true ? 'OK' : formData.water_energy_data.led_empty_tank === false ? '' : formData.water_energy_data.led_empty_tank}
+                          onChange={(e) => handleInputChange('water_energy_data', 'led_empty_tank', e.target.value)}
                           data-testid="led-empty-tank-checkbox"
                         />
-                        <Label htmlFor="led_empty_tank" className="text-sm">LED Tanque Vacío</Label>
                       </div>
                     </div>
                   </div>
@@ -598,53 +597,67 @@ const ServiceForm = ({ user }) => {
                     <div className="space-y-4">
                       <h4 className="font-semibold text-slate-900 flex items-center">
                         <Settings className="w-4 h-4 mr-2 text-green-600" />
-                        Motor {motorNum} - Datos Básicos
+                        Motor {motorNum} — Consumo / Contactor
                       </h4>
                       <div className="space-y-3">
-                        <div>
-                          <Label htmlFor={`motor_${motorNum}_hp`} className="text-sm">HP del Motor</Label>
-                          <Input
-                            id={`motor_${motorNum}_hp`}
-                            type="number"
-                            step="0.1"
-                            placeholder="1.5"
-                            value={formData[`motor_${motorNum}_data`].motor_hp}
-                            onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'motor_hp', e.target.value)}
-                            data-testid={`motor-${motorNum}-hp-input`}
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-sm">HP</Label>
+                            <Input type="number" step="0.1" placeholder="1.5"
+                              value={formData[`motor_${motorNum}_data`].motor_hp}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'motor_hp', e.target.value)}
+                              data-testid={`motor-${motorNum}-hp-input`}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">In (A nominal)</Label>
+                            <Input type="number" step="0.1" placeholder="7.2"
+                              value={formData[`motor_${motorNum}_data`].amperage}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'amperage', e.target.value)}
+                              data-testid={`motor-${motorNum}-amperage-input`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor={`motor_${motorNum}_amperage`} className="text-sm">Amperaje (A)</Label>
-                          <Input
-                            id={`motor_${motorNum}_amperage`}
-                            type="number"
-                            step="0.1"
-                            placeholder="7.2"
-                            value={formData[`motor_${motorNum}_data`].amperage}
-                            onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'amperage', e.target.value)}
-                            data-testid={`motor-${motorNum}-amperage-input`}
-                          />
+                        <p className="text-xs text-slate-500 font-medium">Corrientes de Fase (A)</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-sm">R</Label>
+                            <Input type="number" step="0.1" placeholder="7.0"
+                              value={formData[`motor_${motorNum}_data`].phase_r}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'phase_r', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">S</Label>
+                            <Input type="number" step="0.1" placeholder="7.1"
+                              value={formData[`motor_${motorNum}_data`].phase_s}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'phase_s', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">T</Label>
+                            <Input type="number" step="0.1" placeholder="7.0"
+                              value={formData[`motor_${motorNum}_data`].phase_t}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'phase_t', e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor={`motor_${motorNum}_resistance`} className="text-sm">Resistencia Bobina (Ω)</Label>
-                          <Input
-                            id={`motor_${motorNum}_resistance`}
-                            type="number"
-                            step="0.1"
-                            placeholder="5.5"
-                            value={formData[`motor_${motorNum}_data`].resistance_coil}
-                            onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'resistance_coil', e.target.value)}
-                            data-testid={`motor-${motorNum}-resistance-input`}
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`motor_${motorNum}_contactor`}
-                            checked={formData[`motor_${motorNum}_data`].contactor_working}
-                            onCheckedChange={(checked) => handleInputChange(`motor_${motorNum}_data`, 'contactor_working', checked)}
-                            data-testid={`motor-${motorNum}-contactor-checkbox`}
-                          />
-                          <Label htmlFor={`motor_${motorNum}_contactor`} className="text-sm">Contactor Funcionando</Label>
+                        <p className="text-xs text-slate-500 font-medium">Contactor</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-sm">Bobina</Label>
+                            <Input placeholder="OK / Falla"
+                              value={formData[`motor_${motorNum}_data`].bobina_value}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'bobina_value', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">Contactos</Label>
+                            <Input placeholder="OK / Falla"
+                              value={formData[`motor_${motorNum}_data`].contactos_value}
+                              onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'contactos_value', e.target.value)}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -699,26 +712,18 @@ const ServiceForm = ({ user }) => {
                       </h4>
                       <div className="space-y-3">
                         <div>
-                          <Label htmlFor={`motor_${motorNum}_motor_temp`} className="text-sm">Temperatura Motor</Label>
-                          <Input
-                            id={`motor_${motorNum}_motor_temp`}
-                            type="number"
-                            step="0.1"
-                            placeholder="45"
+                          <Label className="text-sm">Temperatura Motor (°C)</Label>
+                          <Input type="number" step="0.1" placeholder="45"
                             value={formData[`motor_${motorNum}_data`].motor_temp}
                             onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'motor_temp', e.target.value)}
                             data-testid={`motor-${motorNum}-motor-temp-input`}
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`motor_${motorNum}_coil_temp`} className="text-sm">Temperatura Bobina</Label>
-                          <Input
-                            id={`motor_${motorNum}_coil_temp`}
-                            type="number"
-                            step="0.1"
-                            placeholder="50"
-                            value={formData[`motor_${motorNum}_data`].coil_temp}
-                            onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'coil_temp', e.target.value)}
+                          <Label className="text-sm">Temperatura Voluta (°C)</Label>
+                          <Input type="number" step="0.1" placeholder="50"
+                            value={formData[`motor_${motorNum}_data`].voluta_temp}
+                            onChange={(e) => handleInputChange(`motor_${motorNum}_data`, 'voluta_temp', e.target.value)}
                             data-testid={`motor-${motorNum}-coil-temp-input`}
                           />
                         </div>
@@ -747,28 +752,40 @@ const ServiceForm = ({ user }) => {
                   <div className="space-y-4">
                     <h4 className="font-semibold text-slate-900 flex items-center">
                       <Wrench className="w-4 h-4 mr-2 text-blue-600" />
-                      Breakers
+                      Breakers / Relés
                     </h4>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {[1, 2, 3].map(num => (
-                        <div key={num} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`breaker_tripolar_${num}`}
-                            checked={formData.control_peripherals_data[`breaker_tripolar_${num}`]}
-                            onCheckedChange={(checked) => handleInputChange('control_peripherals_data', `breaker_tripolar_${num}`, checked)}
+                        <div key={num}>
+                          <Label className="text-sm">Breaker Tripolar {num}</Label>
+                          <Input placeholder="OK / Falla / valor A"
+                            value={formData.control_peripherals_data[`breaker_tripolar_${num}`]}
+                            onChange={(e) => handleInputChange('control_peripherals_data', `breaker_tripolar_${num}`, e.target.value)}
                             data-testid={`breaker-tripolar-${num}-checkbox`}
                           />
-                          <Label htmlFor={`breaker_tripolar_${num}`} className="text-sm">Breaker Tripolar {num}</Label>
                         </div>
                       ))}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="breaker_control"
-                          checked={formData.control_peripherals_data.breaker_control}
-                          onCheckedChange={(checked) => handleInputChange('control_peripherals_data', 'breaker_control', checked)}
+                      <div>
+                        <Label className="text-sm">Breaker Control</Label>
+                        <Input placeholder="OK / Falla"
+                          value={formData.control_peripherals_data.breaker_control}
+                          onChange={(e) => handleInputChange('control_peripherals_data', 'breaker_control', e.target.value)}
                           data-testid="breaker-control-checkbox"
                         />
-                        <Label htmlFor="breaker_control" className="text-sm">Breaker Control</Label>
+                      </div>
+                      <div>
+                        <Label className="text-sm">Relé Alternador</Label>
+                        <Input placeholder="OK / Falla"
+                          value={formData.control_peripherals_data.relay_alternator}
+                          onChange={(e) => handleInputChange('control_peripherals_data', 'relay_alternator', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Relé Control / Nivel</Label>
+                        <Input placeholder="OK / Falla"
+                          value={formData.control_peripherals_data.relay_control_level}
+                          onChange={(e) => handleInputChange('control_peripherals_data', 'relay_control_level', e.target.value)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -781,40 +798,30 @@ const ServiceForm = ({ user }) => {
                     </h4>
                     <div className="space-y-3">
                       <div>
-                        <Label htmlFor="manometer" className="text-sm">Manómetro</Label>
-                        <Input
-                          id="manometer"
-                          type="number"
-                          step="0.1"
-                          placeholder="40"
+                        <Label className="text-sm">Manómetro (PSI)</Label>
+                        <Input type="number" step="0.1" placeholder="40"
                           value={formData.control_peripherals_data.manometer}
                           onChange={(e) => handleInputChange('control_peripherals_data', 'manometer', e.target.value)}
                           data-testid="manometer-input"
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="work_pressure" className="text-sm">Presión Trabajo</Label>
-                        <Input
-                          id="work_pressure"
-                          type="number"
-                          step="0.1"
-                          placeholder="30"
-                          value={formData.control_peripherals_data.work_pressure}
-                          onChange={(e) => handleInputChange('control_peripherals_data', 'work_pressure', e.target.value)}
-                          data-testid="work-pressure-input"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="emergency_pressure" className="text-sm">Presión Emergencia</Label>
-                        <Input
-                          id="emergency_pressure"
-                          type="number"
-                          step="0.1"
-                          placeholder="50"
-                          value={formData.control_peripherals_data.emergency_pressure}
-                          onChange={(e) => handleInputChange('control_peripherals_data', 'emergency_pressure', e.target.value)}
-                          data-testid="emergency-pressure-input"
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-sm">Presión On (PSI)</Label>
+                          <Input type="number" step="0.1" placeholder="30"
+                            value={formData.control_peripherals_data.pressure_on}
+                            onChange={(e) => handleInputChange('control_peripherals_data', 'pressure_on', e.target.value)}
+                            data-testid="work-pressure-input"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Presión Off (PSI)</Label>
+                          <Input type="number" step="0.1" placeholder="50"
+                            value={formData.control_peripherals_data.pressure_off}
+                            onChange={(e) => handleInputChange('control_peripherals_data', 'pressure_off', e.target.value)}
+                            data-testid="emergency-pressure-input"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -931,7 +938,48 @@ const ServiceForm = ({ user }) => {
           </CardContent>
         </Card>
 
-        {/* Submit Button */}
+        {/* Firmas */}
+        <Card className="form-section">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-slate-600" />
+              Firmas de Conformidad
+            </CardTitle>
+            <CardDescription>
+              Nombres del técnico y del cliente que recibe el servicio
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="technician_name">Técnico — Hidrobombas Mérida</Label>
+                <Input
+                  id="technician_name"
+                  placeholder="Nombre del técnico"
+                  value={formData.technician_name}
+                  onChange={(e) => handleInputChange(null, 'technician_name', e.target.value)}
+                />
+                <div className="border-t-2 border-slate-400 mt-8 pt-1">
+                  <p className="text-xs text-slate-500 text-center">Firma del Técnico</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client_signature_name">Cliente</Label>
+                <Input
+                  id="client_signature_name"
+                  placeholder="Nombre del cliente o representante"
+                  value={formData.client_signature_name}
+                  onChange={(e) => handleInputChange(null, 'client_signature_name', e.target.value)}
+                />
+                <div className="border-t-2 border-slate-400 mt-8 pt-1">
+                  <p className="text-xs text-slate-500 text-center">Firma del Cliente</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+
         <div className="flex items-center justify-end space-x-4 pt-6">
           <Button 
             type="button" 
