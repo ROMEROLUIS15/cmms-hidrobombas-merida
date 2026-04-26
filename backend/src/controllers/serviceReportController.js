@@ -1,6 +1,5 @@
 const asyncHandler = require('express-async-handler');
 const { ServiceReport, Equipment, Client, User } = require('../models');
-const { Op } = require('sequelize');
 
 // ─── Helper: generate sequential report number ────────────────────────────────
 const generateReportNumber = async () => {
@@ -61,7 +60,6 @@ const getServiceReportById = asyncHandler(async (req, res) => {
 const createServiceReport = asyncHandler(async (req, res) => {
   const {
     equipment_id,
-    client_id,
     visit_type,
     system_name,
     report_date,

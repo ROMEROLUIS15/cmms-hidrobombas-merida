@@ -80,7 +80,8 @@ Este CMMS digitaliza ese proceso de extremo a extremo:
 | **Morgan**          | Logging de requests                   |
 | **bcryptjs**        | Hash de contraseñas                   |
 | **Nodemailer**      | Envío de emails (reset de contraseña) |
-
+| **Zod**             | Validación estricta de esquemas HTTP  |
+| **ESLint + JSDoc**  | Calidad de código y tipado simulado   |
 ### Frontend
 
 | Tecnología          | Uso                                 |
@@ -142,6 +143,7 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
 │
 ├── backend/                      ← API REST Node.js + Express
 │   ├── package.json
+│   ├── eslint.config.js          ← Reglas estrictas de linter
 │   ├── .env                      ← Variables de entorno (NO se sube a git)
 │   ├── .env.example
 │   ├── seed-dummy-data.js        ← Poblador de BD para desarrollo
@@ -176,12 +178,15 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
 │       ├── middleware/
 │       │   ├── authMiddleware.js       ← protect / authorize / optional
 │       │   ├── errorHandler.js
-│       │   └── validatorMiddleware.js
+│       │   └── zodMiddleware.js        ← Interceptor de errores Zod
+│       ├── validators/
+│       │   └── authValidators.js       ← Esquemas Zod (registro/login)
 │       └── utils/
 │           └── jwt.js
 │
 └── frontend/                     ← React 18 SPA / PWA
     ├── package.json
+    ├── eslint.config.js          ← Reglas estrictas de linter
     ├── .env
     ├── public/
     │   ├── index.html            ← Meta PWA, manifest link
@@ -507,7 +512,7 @@ El endpoint `GET /api/service-reports/:id/pdf` genera y **streamea** un PDF en m
 - 🛡️ **Helmet** — 15 headers de seguridad HTTP automáticos
 - 🔑 **bcryptjs** — Hash de contraseñas con salt rounds
 - 🌐 **CORS** configurado por allowlist (no `*`)
-- ✅ **Validación** de inputs con middleware dedicado
+- ✅ **Validación Estricta** de inputs con `Zod` (schemas inferibles) y sanitización.
 - 🚫 **Tokens de reset** de un solo uso con expiración
 - 📵 **Rutas protegidas** — Todo requiere JWT válido salvo `/auth/*`
 
@@ -520,9 +525,10 @@ El endpoint `GET /api/service-reports/:id/pdf` genera y **streamea** un PDF en m
 - [x] **v1.2** — Refactorización UI/UX del historial de reportes
 - [x] **v2.0** — Generación de PDF con PDFKit (stream en memoria)
 - [x] **v2.0** — PWA completa: SW, IndexedDB, Background Sync, offline.html
-- [ ] **v2.1** — Firma digital en canvas (tablet)
-- [ ] **v2.2** — QR en equipos para acceso rápido al formulario
-- [ ] **v2.3** — Notificaciones push para recordatorios de mantenimiento mensual
+- [x] **v2.1** — Calidad de Código: Validación Zod, Linting Estricto y JSDoc
+- [ ] **v2.2** — Firma digital en canvas (tablet)
+- [ ] **v2.3** — QR en equipos para acceso rápido al formulario
+- [ ] **v2.4** — Notificaciones push para recordatorios de mantenimiento mensual
 - [ ] **v3.0** — Multi-empresa (tenant isolation)
 
 ---

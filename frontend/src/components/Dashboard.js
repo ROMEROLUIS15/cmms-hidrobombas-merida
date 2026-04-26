@@ -41,11 +41,11 @@ const Dashboard = ({ user }) => {
       
       // Load recent service reports
       const reportsResponse = await axios.get(`${API}/service-reports`);
-      setRecentReports(reportsResponse.data.slice(0, 5));
+      setRecentReports(reportsResponse.data?.data?.slice(0, 5) || []);
       
       // Load recent equipment
       const equipmentResponse = await axios.get(`${API}/equipment`);
-      setRecentEquipment(equipmentResponse.data.slice(0, 5));
+      setRecentEquipment(equipmentResponse.data?.data?.slice(0, 5) || []);
       
     } catch (error) {
       console.error('Error loading dashboard data:', error);

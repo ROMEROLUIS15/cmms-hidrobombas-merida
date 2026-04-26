@@ -143,7 +143,7 @@ const buildReportPDF = async (reportId) => {
 
   const infoY = doc.y;
   const col1 = 40, col2 = 40 + pw / 2 + 5;
-  const colW = pw / 2 - 5;
+
 
   // Left column
   fieldRow(doc, 'Cliente:', report.equipment?.client?.name, col1, infoY);

@@ -122,7 +122,7 @@ const optional = asyncHandler(async (req, res, next) => {
         role: decoded.role
       };
     }
-  } catch (tokenError) {
+  } catch {
     // Silent fail for optional auth
   }
 

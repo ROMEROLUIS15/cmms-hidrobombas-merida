@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 
 /**
- * useNetworkStatus
- * Returns { isOnline, wasOffline } and fires toast notifications
- * when the connection changes.
+ * Hook para monitorear el estado de la conexión de red.
+ * @returns {{ isOnline: boolean, wasOffline: boolean }} Estado actual de la red.
  */
 export const useNetworkStatus = () => {
   const [isOnline, setIsOnline]     = useState(navigator.onLine);
