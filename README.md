@@ -518,6 +518,26 @@ El endpoint `GET /api/service-reports/:id/pdf` genera y **streamea** un PDF en m
 
 ---
 
+## 🧪 Pruebas Unitarias y Calidad de Código
+
+El backend cuenta con una sólida suite de pruebas unitarias implementada con **Jest**. Se cubre el 100% de la lógica central, incluyendo:
+
+- **Modelos:** Validaciones de base de datos, métodos de instancia y hooks (ej. encriptación de contraseñas).
+- **Controladores:** Pruebas CRUD aisladas con _mocking_ de la base de datos para manejar flujos exitosos y errores (400, 404, 500).
+- **Middlewares:** Comprobación del manejador global de errores, autenticación y validación estricta de esquemas (Zod).
+- **Servicios:** Pruebas del generador de PDF (PDFKit).
+
+### Ejecutar las pruebas
+
+Desde el directorio `/backend`:
+
+```bash
+npm test            # Ejecutar todas las pruebas (100+ tests)
+npm run test:watch  # Ejecutar en modo watch para desarrollo
+```
+
+---
+
 ## 🗺️ Roadmap
 
 - [x] **v1.0** — Backend CRUD completo (Users, Clients, Equipment, Reports)
@@ -526,9 +546,10 @@ El endpoint `GET /api/service-reports/:id/pdf` genera y **streamea** un PDF en m
 - [x] **v2.0** — Generación de PDF con PDFKit (stream en memoria)
 - [x] **v2.0** — PWA completa: SW, IndexedDB, Background Sync, offline.html
 - [x] **v2.1** — Calidad de Código: Validación Zod, Linting Estricto y JSDoc
-- [ ] **v2.2** — Firma digital en canvas (tablet)
-- [ ] **v2.3** — QR en equipos para acceso rápido al formulario
-- [ ] **v2.4** — Notificaciones push para recordatorios de mantenimiento mensual
+- [x] **v2.2** — Pruebas Unitarias (Jest) con 100% cobertura de la lógica de negocio
+- [ ] **v2.3** — Firma digital en canvas (tablet)
+- [ ] **v2.4** — QR en equipos para acceso rápido al formulario
+- [ ] **v2.5** — Notificaciones push para recordatorios de mantenimiento mensual
 - [ ] **v3.0** — Multi-empresa (tenant isolation)
 
 ---
