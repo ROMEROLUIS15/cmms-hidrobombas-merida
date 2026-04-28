@@ -95,7 +95,7 @@ const Navigation = ({ user, onLogout }) => {
                 </div>
                 <div className="hidden sm:block">
                   <h1 className="text-xl font-bold text-gradient">
-                    CMMS Hidrobombas
+                    Hidrobombas Mérida
                   </h1>
                   <p className="text-xs text-slate-500 -mt-1">
                     Sistema de Mantenimiento

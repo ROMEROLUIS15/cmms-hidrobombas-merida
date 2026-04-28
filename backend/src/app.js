@@ -42,7 +42,7 @@ if (process.env.NODE_ENV !== 'test') {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'CMMS Hidrobombas API - Monorepo Version',
+    message: 'Hidrobombas Mérida API - Monorepo Version',
     version: '2.0.0',
     timestamp: new Date().toISOString(),
   });

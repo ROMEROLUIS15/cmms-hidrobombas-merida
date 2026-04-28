@@ -151,7 +151,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
             <img src={logo} alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-full" />
           </div>
           <h1 className="text-3xl font-bold text-gradient mb-2">
-            CMMS Hidrobombas
+            Hidrobombas Mérida
           </h1>
           <p className="text-slate-600">
             Sistema de Gestión de Mantenimiento
@@ -383,7 +383,6 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                     <option value="technician">Técnico</option>
                     <option value="supervisor">Supervisor</option>
                     <option value="admin">Administrador</option>
-                    <option value="client">Cliente</option>
                   </select>
                 </div>
               )}
@@ -461,7 +460,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
         </Card>
         
         <div className="text-center mt-6 text-sm text-slate-500">
-          © 2024 CMMS Hidrobombas. Sistema especializado en mantenimiento.
+          © 2026 Hidrobombas Mérida. Sistema especializado en mantenimiento.
         </div>
       </div>
     </div>

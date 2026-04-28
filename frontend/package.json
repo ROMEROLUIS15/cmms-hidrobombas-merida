@@ -54,8 +54,8 @@
     "zod": "^4.1.11"
   },
   "scripts": {
-    "start": "set NODE_OPTIONS=--openssl-legacy-provider && set PORT=5000 && craco start",
-    "build": "set NODE_OPTIONS=--openssl-legacy-provider && set PORT=5000 && craco build",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider PORT=5000 craco start",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider PORT=5000 craco build",
     "test": "craco test"
   },
   "browserslist": {

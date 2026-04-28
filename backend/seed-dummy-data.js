@@ -10,7 +10,8 @@ const seedData = async () => {
     // Validar variables de entorno críticas antes de proceder
     const requiredEnv = [
       'SEED_ADMIN_EMAIL', 'SEED_ADMIN_PASSWORD',
-      'SEED_TECH_EMAIL', 'SEED_TECH_PASSWORD'
+      'SEED_TECH_EMAIL', 'SEED_TECH_PASSWORD',
+      'SEED_TECH_2_EMAIL', 'SEED_TECH_2_PASSWORD'
     ];
     const missing = requiredEnv.filter(key => !process.env[key]);
     if (missing.length > 0) {
@@ -30,14 +31,23 @@ const seedData = async () => {
       role: 'admin'
     });
 
-    const tecnico = await User.create({
-      username: process.env.SEED_TECH_NAME     || 'Técnico Hidrobombas',
+    const tecnico1 = await User.create({
+      username: process.env.SEED_TECH_NAME     || 'Técnico 1',
       email:    process.env.SEED_TECH_EMAIL,
       password: process.env.SEED_TECH_PASSWORD,
       role: 'technician'
     });
+
+    const tecnico2 = await User.create({
+      username: process.env.SEED_TECH_2_NAME   || 'Técnico 2',
+      email:    process.env.SEED_TECH_2_EMAIL,
+      password: process.env.SEED_TECH_2_PASSWORD,
+      role: 'technician'
+    });
+
     console.log(`  ✅ Admin: ${admin.email}`);
-    console.log(`  ✅ Técnico: ${tecnico.email}\n`);
+    console.log(`  ✅ Técnico 1: ${tecnico1.email}`);
+    console.log(`  ✅ Técnico 2: ${tecnico2.email}\n`);
 
     // ─── 2. CLIENTES ─────────────────────────────────────────────────────────
     console.log('🏢 Creando clientes...');
@@ -83,7 +93,7 @@ const seedData = async () => {
       {
         reportNumber: 'SRV-0001',
         visitType: 'mensual',
-        reportDate: '2025-01-15',
+        reportDate: '2026-01-15',
         systemName: 'Sistema Hidroneumático Torre A',
         description: 'Mantenimiento preventivo mensual completo.',
         observations: 'Sistema operando dentro de parámetros. Se lubricaron partes móviles.',
@@ -109,12 +119,12 @@ const seedData = async () => {
         }),
         cost: 350.00,
         equipmentId: equipos[0].id,
-        userId: tecnico.id
+        userId: tecnico1.id
       },
       {
         reportNumber: 'SRV-0002',
         visitType: 'eventual',
-        reportDate: '2025-02-20',
+        reportDate: '2026-02-20',
         systemName: 'Bomba Secundaria — Planta Baja',
         description: 'Falla en sello mecánico. Reemplazo y prueba hidrostática.',
         observations: 'Bomba en período de observación por 2 semanas. Monitorear fugas.',
@@ -130,12 +140,12 @@ const seedData = async () => {
         }]),
         cost: 520.00,
         equipmentId: equipos[1].id,
-        userId: tecnico.id
+        userId: tecnico1.id
       },
       {
         reportNumber: 'SRV-0003',
         visitType: 'mensual',
-        reportDate: '2025-03-10',
+        reportDate: '2026-03-10',
         systemName: 'Sala de Máquinas — Motor Principal',
         description: 'Revisión de motores eléctricos. Medición Megger y corrientes de fase.',
         observations: 'Motores en buen estado. Valores dentro del rango nominal.',
@@ -162,12 +172,12 @@ const seedData = async () => {
         }),
         cost: 180.00,
         equipmentId: equipos[2].id,
-        userId: tecnico.id
+        userId: tecnico1.id
       },
       {
         reportNumber: 'SRV-0004',
         visitType: 'eventual',
-        reportDate: '2025-03-25',
+        reportDate: '2026-03-25',
         systemName: 'Pozo Profundo #3 — Bomba Sumergible',
         description: 'Diagnóstico. Impulsor desgastado y cable dañado por corrosión.',
         observations: 'Requiere reemplazo urgente de impulsor y cable sumergible. Presupuesto pendiente.',
@@ -179,7 +189,7 @@ const seedData = async () => {
       {
         reportNumber: 'SRV-0005',
         visitType: 'mensual',
-        reportDate: '2025-04-05',
+        reportDate: '2026-04-05',
         systemName: 'Sistema Hidroneumático Hotel Mérida',
         description: 'Mantenimiento preventivo. Presión tanque membrana, presostato y filtros.',
         observations: 'Sistema OK. Reemplazar tanque membrana en próximo mantenimiento anual.',
@@ -213,7 +223,7 @@ const seedData = async () => {
     console.log('🎉 ¡Base de datos cargada exitosamente con datos de prueba!');
     console.log('──────────────────────────────────────────────────');
     console.log('📊 Resumen:');
-    console.log('   👤 2 Usuarios (1 Admin, 1 Técnico)');
+    console.log('   👤 3 Usuarios (1 Admin, 2 Técnicos)');
     console.log('   🏢 3 Clientes');
     console.log('   ⚙️  8 Equipos');
     console.log('   📋 5 Reportes de Servicio (con datos técnicos completos)');
