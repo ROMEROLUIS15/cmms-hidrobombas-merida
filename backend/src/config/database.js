@@ -1,6 +1,13 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// Forzar la carga de pg para entornos serverless como Vercel
+try {
+  require('pg');
+} catch (e) {
+  // Ignorar si falla localmente si no se usa Postgres
+}
+
 const isPostgres = !!process.env.DATABASE_URL;
 
 const sequelize = isPostgres
@@ -10,7 +17,7 @@ const sequelize = isPostgres
       dialectOptions: {
         ssl: {
           require: true,
-          rejectUnauthorized: false
+          rejectUnauthorized: false // Necesario para Neon/Vercel en muchos casos
         }
       },
       logging: false,
