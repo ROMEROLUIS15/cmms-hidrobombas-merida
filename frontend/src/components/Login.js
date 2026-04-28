@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+import logo from '../assets/logo.jpg';
+
 const Login = ({ onLogin, isRegisterMode = false }) => {
   const [isLogin, setIsLogin] = useState(!isRegisterMode);
   const [loading, setLoading] = useState(false);
@@ -145,8 +147,8 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-4">
-            <Wrench className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-full shadow-xl mb-4 p-2">
+            <img src={logo} alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-full" />
           </div>
           <h1 className="text-3xl font-bold text-gradient mb-2">
             CMMS Hidrobombas
