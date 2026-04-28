@@ -50,6 +50,12 @@ const Navigation = ({ user, onLogout }) => {
       icon: Building2,
       label: 'Clientes',
       roles: ['admin', 'supervisor']
+    },
+    {
+      path: '/users',
+      icon: Users,
+      label: 'Usuarios',
+      roles: ['admin']
     }
   ];
 

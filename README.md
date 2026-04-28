@@ -365,6 +365,27 @@ Abre [http://localhost:5000](http://localhost:5000) en el navegador.
 
 ---
 
+## 👥 Gestión de Usuarios
+
+Para un entorno profesional, existen dos formas de gestionar los accesos:
+
+### 1. Gestión de Usuarios (Asistente Seguro) 🛡️
+Hemos creado un asistente inteligente que le guiará paso a paso para evitar errores. Este sistema valida que los correos sean reales y que las contraseñas coincidan antes de guardarlas.
+
+**Para usarlo:**
+1.  Abra su terminal.
+2.  Escriba: `cd backend`
+3.  Escriba: `npm run user:manage`
+4.  **Siga las instrucciones en pantalla:**
+    *   **Opción 1 (VER LISTA):** Muestra una tabla con todos los técnicos y si pueden entrar o no.
+    *   **Opción 2 (CREAR NUEVO):** Le pedirá el nombre, el correo (dos veces para verificar) y la clave (dos veces para verificar).
+    *   **Opción 3 (DAR ACCESO):** Use esto para autorizar a un técnico que se acaba de registrar en la web.
+    *   **Opción 4 (QUITAR ACCESO):** Bloquea el acceso a cualquier usuario de forma inmediata.
+
+**Nota de seguridad:** Al escribir la clave, asegúrese de que nadie esté mirando su pantalla. El sistema le pedirá confirmación antes de cualquier cambio importante.
+
+---
+
 ## ⚙️ Variables de Entorno
 
 ### `backend/.env`

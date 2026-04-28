@@ -13,6 +13,7 @@ import ServiceForm from './components/ServiceForm';
 import ClientList from './components/ClientList';
 import EquipmentList from './components/EquipmentList';
 import ServiceReports from './components/ServiceReports';
+import UserManagement from './components/UserManagement';
 import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/sonner';
 import OfflineBanner from './components/OfflineBanner';
@@ -129,6 +130,9 @@ function App() {
             <Route path="/equipment" element={<EquipmentList user={user} />} />
             <Route path="/service-reports" element={<ServiceReports user={user} />} />
             <Route path="/reports" element={<ServiceReports user={user} />} />
+            {user?.role === 'admin' && (
+              <Route path="/users" element={<UserManagement user={user} />} />
+            )}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
