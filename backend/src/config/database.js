@@ -9,6 +9,8 @@ try {
 }
 
 const isPostgres = !!process.env.DATABASE_URL;
+console.log('🌐 Database Mode:', isPostgres ? 'POSTGRES' : 'SQLITE');
+if (!isPostgres) console.warn('⚠️  DATABASE_URL not found, falling back to SQLite (this will fail on Vercel)');
 
 const sequelize = isPostgres
   ? new Sequelize(process.env.DATABASE_URL, {
