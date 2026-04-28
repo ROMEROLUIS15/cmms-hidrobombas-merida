@@ -38,6 +38,7 @@ const testConnection = async () => {
     console.error('❌ Unable to connect to database:', error);
     if (!process.env.VERCEL) process.exit(1);
     throw error;
+  }
 };
 
 // Initialize database
@@ -52,6 +53,7 @@ const initializeDatabase = async () => {
     console.error('❌ Database initialization failed:', error);
     if (!process.env.VERCEL) process.exit(1);
     throw error;
+  }
 };
 
 module.exports = {
