@@ -9,14 +9,17 @@ const startServer = async () => {
   try {
     await initializeDatabase();
     
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-      console.log('📍 Auth routes mounted at: /api/auth');
-      console.log(`🔗 Test register: POST ${PORT}/api/auth/register`);
-      console.log(`🔗 Test login: POST ${PORT}/api/auth/login`);
-    });
+    if (process.env.VERCEL) {
+      // On Vercel, we just need to ensure DB is initialized
+      await initializeDatabase();
+    } else {
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`📱 Environment: ${process.env.NODE_ENV}`);
+        console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+        console.log('📍 Auth routes mounted at: /api/auth');
+      });
+    }
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
@@ -47,3 +50,5 @@ process.on('SIGINT', () => {
 });
 
 startServer();
+
+module.exports = app;

@@ -1,15 +1,33 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: process.env.DB_STORAGE || './database.sqlite', // Use memory DB for tests
-  logging: false, // Silenced to keep terminal clean. Set to console.log to debug queries.
-  define: {
-    timestamps: true,
-    underscored: false
-  }
-});
+const isPostgres = !!process.env.DATABASE_URL;
+
+const sequelize = isPostgres
+  ? new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      protocol: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      logging: false,
+      define: {
+        timestamps: true,
+        underscored: false
+      }
+    })
+  : new Sequelize({
+      dialect: 'sqlite',
+      storage: process.env.DB_STORAGE || './database.sqlite',
+      logging: false,
+      define: {
+        timestamps: true,
+        underscored: false
+      }
+    });
 
 // Test connection
 const testConnection = async () => {
