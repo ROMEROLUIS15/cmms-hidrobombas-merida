@@ -13,7 +13,7 @@ const startServer = async () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📱 Environment: ${process.env.NODE_ENV}`);
       console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-      console.log(`📍 Auth routes mounted at: /api/auth`);
+      console.log('📍 Auth routes mounted at: /api/auth');
       console.log(`🔗 Test register: POST ${PORT}/api/auth/register`);
       console.log(`🔗 Test login: POST ${PORT}/api/auth/login`);
     });

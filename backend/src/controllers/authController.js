@@ -1,10 +1,21 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { Op } = require('sequelize');
 const asyncHandler = require('express-async-handler');
 const { generateToken } = require('../utils/jwt');
 
-// Register new user
+/**
+ * Registra un nuevo usuario en el sistema.
+ * @async
+ * @param {import('express').Request} req - Objeto Request de Express.
+ * @param {Object} req.body - Cuerpo de la petición.
+ * @param {string} req.body.email - Email del usuario (validado previamente por Zod).
+ * @param {string} req.body.password - Contraseña del usuario.
+ * @param {string} [req.body.fullName] - Nombre completo del usuario.
+ * @param {string} [req.body.full_name] - Nombre completo del usuario (alternativo).
+ * @param {string} [req.body.role] - Rol del usuario.
+ * @param {import('express').Response} res - Objeto Response de Express.
+ * @returns {Promise<void>} Devuelve la respuesta JSON con el token JWT o un error de conflicto.
+ */
 const register = asyncHandler(async (req, res) => {
     // Accept both camelCase (fullName) and snake_case (full_name) from different clients
     const { fullName, full_name, email, password, role } = req.body;
@@ -52,7 +63,16 @@ const register = asyncHandler(async (req, res) => {
     });
 });
 
-// Login user
+/**
+ * Inicia sesión de un usuario existente.
+ * @async
+ * @param {import('express').Request} req - Objeto Request de Express.
+ * @param {Object} req.body - Cuerpo de la petición.
+ * @param {string} req.body.email - Email del usuario.
+ * @param {string} req.body.password - Contraseña del usuario.
+ * @param {import('express').Response} res - Objeto Response de Express.
+ * @returns {Promise<void>} Devuelve la respuesta JSON con el token JWT o un error de autenticación.
+ */
 const login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 

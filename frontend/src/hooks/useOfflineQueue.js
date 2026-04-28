@@ -10,6 +10,10 @@ const STORE      = 'pendingReports';
 
 // ── IndexedDB helpers ─────────────────────────────────────────────────────────
 
+/**
+ * Abre la conexión con IndexedDB.
+ * @returns {Promise<IDBDatabase>} La instancia de la base de datos.
+ */
 const openDB = () =>
   new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);

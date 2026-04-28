@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: './database.sqlite',
+  storage: process.env.DB_STORAGE || './database.sqlite', // Use memory DB for tests
   logging: false, // Silenced to keep terminal clean. Set to console.log to debug queries.
   define: {
     timestamps: true,

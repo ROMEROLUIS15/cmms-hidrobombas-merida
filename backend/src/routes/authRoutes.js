@@ -8,13 +8,14 @@ const {
   resendVerification
 } = require('../controllers/passwordController');
 const { protect } = require('../middleware/authMiddleware');
-const { authValidationRules } = require('../middleware/validatorMiddleware');
+const { validateRequest } = require('../middleware/zodMiddleware');
+const { registerSchema, loginSchema } = require('../validators/authValidators');
 
 const router = express.Router();
 
 // ── Public Auth ──────────────────────────────────────────────────────────────
-router.post('/register', authValidationRules.register, register);
-router.post('/login', authValidationRules.login, login);
+router.post('/register', validateRequest(registerSchema), register);
+router.post('/login', validateRequest(loginSchema), login);
 
 // ── Password Recovery ────────────────────────────────────────────────────────
 router.post('/forgot-password', forgotPassword);

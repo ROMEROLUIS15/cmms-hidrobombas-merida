@@ -454,22 +454,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
               </button>
             </div>
             
-            {/* Demo credentials info */}
-            {isLogin && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-700 font-medium mb-2">
-                  Credenciales de prueba:
-                </p>
-                <div className="space-y-1 text-xs text-blue-600">
-                  <div>
-                    <strong>Admin:</strong> admin@hidrobombas.com / Admin1234!
-                  </div>
-                  <div>
-                    <strong>Técnico:</strong> tecnico@hidrobombas.com / Tecnico1234!
-                  </div>
-                </div>
-              </div>
-            )}
+
           </CardContent>
         </Card>
         
