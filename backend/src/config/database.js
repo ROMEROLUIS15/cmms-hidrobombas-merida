@@ -8,34 +8,32 @@ try {
   // Ignorar si falla localmente si no se usa Postgres
 }
 
-const isPostgres = !!process.env.DATABASE_URL;
+const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
+const databaseUrl = process.env.DATABASE_URL;
+
+// En Vercel, FORZAMOS el uso de Postgres. Si no hay URL, lanzamos error.
+if (isVercel && !databaseUrl) {
+  throw new Error('❌ CRITICAL ERROR: DATABASE_URL is missing in Vercel environment. Please check your Environment Variables in Vercel dashboard.');
+}
+
+const isPostgres = !!databaseUrl;
 console.log('🌐 Database Mode:', isPostgres ? 'POSTGRES' : 'SQLITE');
-if (!isPostgres) console.warn('⚠️  DATABASE_URL not found, falling back to SQLite (this will fail on Vercel)');
 
 const sequelize = isPostgres
-  ? new Sequelize(process.env.DATABASE_URL, {
+  ? new Sequelize(databaseUrl, {
       dialect: 'postgres',
-      protocol: 'postgres',
       dialectOptions: {
         ssl: {
           require: true,
-          rejectUnauthorized: false // Necesario para Neon/Vercel en muchos casos
+          rejectUnauthorized: false
         }
       },
       logging: false,
-      define: {
-        timestamps: true,
-        underscored: false
-      }
     })
   : new Sequelize({
       dialect: 'sqlite',
       storage: process.env.DB_STORAGE || './database.sqlite',
       logging: false,
-      define: {
-        timestamps: true,
-        underscored: false
-      }
     });
 
 // Test connection
