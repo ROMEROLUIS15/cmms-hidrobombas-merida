@@ -247,12 +247,12 @@ const Dashboard = ({ user }) => {
                 {recentReports.map((report) => (
                   <div className="flex items-start justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                     <div className="flex-1 min-w-0 pr-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-                        <span className="font-medium text-slate-900 text-sm truncate">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                        <span className="font-bold text-slate-900 text-sm">
                           {report.report_number}
                         </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getVisitTypeBadge(report.visit_type)}`}>
-                          {getVisitTypeLabel(report.visit_type)}
+                        <span className={`inline-block w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border ${getVisitTypeBadge(report.visit_type)}`}>
+                          {getVisitTypeLabel(report.visit_type).toUpperCase()}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">

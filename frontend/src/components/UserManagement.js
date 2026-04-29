@@ -89,11 +89,11 @@ const UserManagement = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Shield className="text-blue-600 w-8 h-8" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <Shield className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8" />
             Control de Usuarios
           </h2>
-          <p className="text-slate-500 mt-1">Gestione el acceso y roles del personal técnico.</p>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Gestione el acceso y roles del personal técnico.</p>
         </div>
         
         <div className="relative group">

@@ -237,11 +237,11 @@ const ServiceForm = ({ user }) => {
             <span>Volver</span>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Nuevo Reporte de Servicio
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900 leading-tight">
+              Nuevo Reporte
             </h1>
-            <p className="text-slate-600">
-              Formulario digital para mantenimiento hidroneumático
+            <p className="text-xs sm:text-base text-slate-600">
+              Mantenimiento digital
             </p>
           </div>
         </div>
@@ -393,6 +393,7 @@ const ServiceForm = ({ user }) => {
                             type="number"
                             step="0.1"
                             placeholder="220"
+                            inputMode="decimal"
                             value={formData.water_energy_data.voltage_r_s}
                             onChange={(e) => handleInputChange('water_energy_data', 'voltage_r_s', e.target.value)}
                             data-testid="voltage-r-s-input"
