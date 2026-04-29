@@ -37,7 +37,7 @@ const Dashboard = ({ user }) => {
       
       // Load stats
       const statsResponse = await axios.get(`${API}/dashboard/stats`);
-      setStats(statsResponse.data);
+      setStats(statsResponse.data?.data || statsResponse.data);
       
       // Load recent service reports
       const reportsResponse = await axios.get(`${API}/service-reports`);

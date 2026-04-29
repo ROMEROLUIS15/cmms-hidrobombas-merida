@@ -54,8 +54,8 @@ const EquipmentList = ({ user }) => {
         axios.get(`${API}/equipment`),
         axios.get(`${API}/clients`)
       ]);
-      setEquipment(equipmentResponse.data);
-      setClients(clientsResponse.data);
+      setEquipment(equipmentResponse.data?.data || equipmentResponse.data || []);
+      setClients(clientsResponse.data?.data || clientsResponse.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Error al cargar los datos');
@@ -81,7 +81,8 @@ const EquipmentList = ({ user }) => {
       };
       
       const response = await axios.post(`${API}/equipment`, equipmentData);
-      setEquipment([...equipment, response.data]);
+      const createdEq = response.data?.data || response.data;
+      setEquipment([...equipment, createdEq]);
       setNewEquipment({
         client_id: '',
         name: '',
@@ -385,7 +386,7 @@ const EquipmentList = ({ user }) => {
                   <div className="flex items-center space-x-1">
                     <QrCode className="w-4 h-4 text-slate-400" />
                     <span className="text-xs text-slate-500 font-mono">
-                      {eq.qr_code.slice(-6).toUpperCase()}
+                      {eq.qr_code ? eq.qr_code.slice(-6).toUpperCase() : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -528,10 +529,10 @@ const EquipmentList = ({ user }) => {
             </span>
             <div className="flex items-center space-x-4">
               <span>
-                Hidroneumáticos: {equipment.filter(eq => eq.equipment_type === 'hydropneumatic').length}
+                Hidroneumáticos: {Array.isArray(equipment) ? equipment.filter(eq => eq.equipment_type === 'hydropneumatic').length : 0}
               </span>
               <span>
-                Otros: {equipment.filter(eq => eq.equipment_type !== 'hydropneumatic').length}
+                Otros: {Array.isArray(equipment) ? equipment.filter(eq => eq.equipment_type !== 'hydropneumatic').length : 0}
               </span>
             </div>
           </div>

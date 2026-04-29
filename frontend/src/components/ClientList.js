@@ -43,7 +43,7 @@ const ClientList = ({ user }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/clients`);
-      setClients(response.data);
+      setClients(response.data?.data || response.data || []);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast.error('Error al cargar la lista de clientes');
@@ -64,7 +64,8 @@ const ClientList = ({ user }) => {
     
     try {
       const response = await axios.post(`${API}/clients`, newClient);
-      setClients([...clients, response.data]);
+      const createdClient = response.data?.data || response.data;
+      setClients([...clients, createdClient]);
       setNewClient({
         name: '',
         address: '',
