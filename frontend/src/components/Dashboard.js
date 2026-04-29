@@ -252,7 +252,7 @@ const Dashboard = ({ user }) => {
                           {report.report_number}
                         </span>
                         <span className={`inline-block w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border ${getVisitTypeBadge(report.visit_type)}`}>
-                          {getVisitTypeLabel(report.visit_type).toUpperCase()}
+                          {(getVisitTypeLabel(report.visit_type) || 'S/T').toUpperCase()}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">

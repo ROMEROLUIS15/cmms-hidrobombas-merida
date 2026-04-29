@@ -5,7 +5,7 @@
 ![Version](https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge)
 ![Node](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![SQLite](https://img.shields.io/badge/SQLite-Sequelize-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-Neon-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
 
@@ -73,7 +73,8 @@ Este CMMS digitaliza ese proceso de extremo a extremo:
 | **Node.js 18+**     | Runtime                               |
 | **Express.js**      | Framework HTTP                        |
 | **Sequelize ORM**   | Abstracción de base de datos          |
-| **SQLite 3**        | Base de datos embebida (zero-config)  |
+| **Postgres (Neon)** | Base de datos principal (Producción)  |
+| **SQLite 3**        | Base de datos local (Opcional)        |
 | **JSON Web Tokens** | Autenticación stateless               |
 | **PDFKit**          | Generación de PDFs en memoria         |
 | **Helmet**          | Headers de seguridad HTTP             |
@@ -146,12 +147,14 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
 │   ├── eslint.config.js          ← Reglas estrictas de linter
 │   ├── .env                      ← Variables de entorno (NO se sube a git)
 │   ├── .env.example
+│   ├── bootstrap-admin.js        ← [NUEVO] Configuración inicial Admin
+│   ├── manage-users.js           ← [NUEVO] Asistente interactivo de usuarios
 │   ├── seed-dummy-data.js        ← Poblador de BD para desarrollo
 │   └── src/
 │       ├── server.js             ← Punto de entrada HTTP
 │       ├── app.js                ← Configuración Express (cors, helmet, rutas)
 │       ├── config/
-│       │   └── database.js       ← Conexión Sequelize + SQLite
+│       │   └── database.js       ← Conexión Sequelize (Postgres/SQLite)
 │       ├── models/
 │       │   ├── index.js          ← Asociaciones entre modelos
 │       │   ├── User.js           ← Usuario (admin / technician)
@@ -166,7 +169,8 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
 │       │   ├── equipmentController.js
 │       │   ├── passwordController.js
 │       │   ├── pdfController.js  ← Stream PDF al cliente
-│       │   └── serviceReportController.js
+│       │   ├── serviceReportController.js
+│       │   └── userController.js ← [NUEVO] Gestión de aprobaciones web
 │       ├── services/
 │       │   └── pdfService.js     ← Motor de generación PDF (PDFKit)
 │       ├── routes/
@@ -174,7 +178,8 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
 │       │   ├── clientRoutes.js
 │       │   ├── dashboardRoutes.js
 │       │   ├── equipmentRoutes.js
-│       │   └── serviceReportRoutes.js  ← incluye GET /:id/pdf
+│       │   ├── serviceReportRoutes.js  ← incluye GET /:id/pdf
+│       │   └── userRoutes.js           ← [NUEVO] Rutas de administración
 │       ├── middleware/
 │       │   ├── authMiddleware.js       ← protect / authorize / optional
 │       │   ├── errorHandler.js
@@ -192,13 +197,15 @@ cmms-hidrobombas-merida/          ← Monorepo raíz
     │   ├── index.html            ← Meta PWA, manifest link
     │   ├── manifest.json         ← PWA: name, icons, shortcuts, theme
     │   ├── sw.js                 ← Service Worker (Cache + Sync)
-    │   └── offline.html          ← Página de fallback sin conexión
+    │   ├── offline.html          ← Página de fallback sin conexión
+    │   └── logo.jpg              ← [NUEVO] Logo oficial del sistema
     └── src/
         ├── index.js              ← ReactDOM + registro Service Worker
         ├── App.js                ← Router, auth state, OfflineBanner
         ├── App.css
         ├── index.css
         ├── components/
+        │   ├── UserManagement.js ← [NUEVO] Panel de aprobación web
         │   ├── Login.js          ← Login / Register con animaciones
         │   ├── Dashboard.js      ← KPIs y métricas
         │   ├── Navigation.js     ← Navbar responsive mobile-first
@@ -367,22 +374,23 @@ Abre [http://localhost:5000](http://localhost:5000) en el navegador.
 
 ## 👥 Gestión de Usuarios
 
-Para un entorno profesional, existen dos formas de gestionar los accesos:
+Para una administración profesional, el sistema cuenta con dos niveles de control:
 
-### 1. Gestión de Usuarios (Asistente Seguro) 🛡️
-Hemos creado un asistente inteligente que le guiará paso a paso para evitar errores. Este sistema valida que los correos sean reales y que las contraseñas coincidan antes de guardarlas.
+### 1. Panel de Control Web (Recomendado) 🌐
+El administrador puede gestionar a todo el personal desde la interfaz visual:
+1. Inicie sesión como **Admin**.
+2. Vaya a la sección **"Usuarios"** en el menú.
+3. **Aprobar/Rechazar:** Los nuevos técnicos que se registran aparecen como "Pendientes" y no pueden entrar hasta que usted los active.
+4. **Cambiar Roles:** Puede ascender a técnicos a supervisores o administradores con un clic.
 
-**Para usarlo:**
-1.  Abra su terminal.
-2.  Escriba: `cd backend`
-3.  Escriba: `npm run user:manage`
-4.  **Siga las instrucciones en pantalla:**
-    *   **Opción 1 (VER LISTA):** Muestra una tabla con todos los técnicos y si pueden entrar o no.
-    *   **Opción 2 (CREAR NUEVO):** Le pedirá el nombre, el correo (dos veces para verificar) y la clave (dos veces para verificar).
-    *   **Opción 3 (DAR ACCESO):** Use esto para autorizar a un técnico que se acaba de registrar en la web.
-    *   **Opción 4 (QUITAR ACCESO):** Bloquea el acceso a cualquier usuario de forma inmediata.
+### 2. Configuración Inicial (Bootstrap) 🚀
+Si la base de datos está vacía y necesita crear el primer administrador:
+1. Abra su terminal en `backend/`.
+2. Ejecute: `node bootstrap-admin.js`
+3. Siga los pasos para crear su cuenta maestra.
 
-**Nota de seguridad:** Al escribir la clave, asegúrese de que nadie esté mirando su pantalla. El sistema le pedirá confirmación antes de cualquier cambio importante.
+### 3. Asistente por Terminal (Avanzado) 🛡️
+Para mantenimiento técnico de cuentas, puede usar: `npm run user:manage`
 
 ---
 

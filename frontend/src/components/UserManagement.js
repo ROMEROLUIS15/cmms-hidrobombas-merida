@@ -127,7 +127,7 @@ const UserManagement = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100">
-                        {u.username.charAt(0).toUpperCase()}
+                        {(u.username || u.email || '?').charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="font-semibold text-slate-900">{u.username}</div>
