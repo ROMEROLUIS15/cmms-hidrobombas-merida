@@ -14,7 +14,7 @@ import {
   Building2
 } from 'lucide-react';
 
-import logo from '../assets/logo.jpg';
+// Logo import removed to use public folder
 
 const Navigation = ({ user, onLogout }) => {
   const location = useLocation();
@@ -97,7 +97,7 @@ const Navigation = ({ user, onLogout }) => {
             <div className="flex items-center shrink-0 min-w-0">
               <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity min-w-0">
                 <div className="flex items-center justify-center w-12 h-12 shrink-0 bg-white rounded-full p-1 shadow-md">
-                  <img src={logo} alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-full" />
+                  <img src="/logo.jpg" alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-full" />
                 </div>
                 <div className="hidden sm:block">
                   <h1 className="text-xl font-bold text-gradient">
