@@ -6,7 +6,7 @@
      • Navegación HTML   → Network First con fallback offline
    ───────────────────────────────────────────────────────────────────────────── */
 
-const CACHE_VERSION   = 'v1.0.0';
+const CACHE_VERSION   = 'v1.0.1';
 const STATIC_CACHE    = `hidrobombas-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE   = `hidrobombas-dynamic-${CACHE_VERSION}`;
 const OFFLINE_PAGE    = '/offline.html';
@@ -76,7 +76,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets → Cache First
+  // Static assets → Cache First (pero en desarrollo bypass)
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    event.respondWith(fetch(request));
+    return;
+  }
   event.respondWith(cacheFirst(request));
 });
 

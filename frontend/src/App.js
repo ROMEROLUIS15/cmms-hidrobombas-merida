@@ -9,7 +9,7 @@ import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import VerifyEmail from './components/auth/VerifyEmail';
 import Dashboard from './components/Dashboard';
-import ServiceForm from './components/ServiceForm';
+import ServiceForm from './components/ServiceWizard/ServiceWizard';
 import ClientList from './components/ClientList';
 import EquipmentList from './components/EquipmentList';
 import ServiceReports from './components/ServiceReports';

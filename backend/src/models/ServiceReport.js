@@ -87,6 +87,10 @@ const ServiceReport = sequelize.define('ServiceReport', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  clientSignature: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true
+  },
 
   // ── Campos legacy (mantener compatibilidad) ──────────────────────────────────
   description: {

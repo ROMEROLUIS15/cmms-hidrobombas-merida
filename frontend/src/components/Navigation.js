@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { 
-  Wrench, 
   LayoutDashboard, 
   FileText, 
   Users, 
@@ -11,10 +10,9 @@ import {
   Menu,
   X,
   ClipboardList,
-  Building2
+  Building2,
+  ShieldCheck
 } from 'lucide-react';
-
-// Logo import removed to use public folder
 
 const Navigation = ({ user, onLogout }) => {
   const location = useLocation();
@@ -80,77 +78,75 @@ const Navigation = ({ user, onLogout }) => {
 
   const getRoleBadgeColor = (role) => {
     const colors = {
-      admin: 'bg-gradient-to-r from-purple-500 to-pink-500',
-      supervisor: 'bg-gradient-to-r from-blue-500 to-indigo-500',
-      technician: 'bg-gradient-to-r from-green-500 to-teal-500',
-      client: 'bg-gradient-to-r from-orange-500 to-yellow-500'
+      admin: 'bg-purple-100 text-purple-700 border-purple-200',
+      supervisor: 'bg-blue-100 text-blue-700 border-blue-200',
+      technician: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      client: 'bg-orange-100 text-orange-700 border-orange-200'
     };
-    return colors[role] || 'bg-gradient-to-r from-gray-500 to-slate-500';
+    return colors[role] || 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center shrink-0 min-w-0">
-              <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity min-w-0">
-                <div className="flex items-center justify-center w-12 h-12 shrink-0 bg-white rounded-full p-1 shadow-md">
-                  <img src="/logo.jpg" alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-full" />
+            
+            {/* Left Section: Logo + Navigation */}
+            <div className="flex items-center space-x-8">
+              {/* Logo */}
+              <Link to="/dashboard" className="flex items-center space-x-2 sm:space-x-3 shrink-0 group">
+                <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl shadow-sm border border-slate-100 p-0.5 transition-transform group-hover:scale-105">
+                  <img src="/logo.jpg" alt="Hidrobombas Mérida" className="w-full h-full object-contain rounded-lg" />
                 </div>
-                <div className="hidden sm:block">
-                  <h1 className="text-xl font-bold text-gradient">
-                    Hidrobombas Mérida
+                <div className="flex flex-col justify-center">
+                  <h1 className="text-[15px] sm:text-lg font-extrabold text-slate-900 leading-tight tracking-tight">
+                    Hidrobombas <span className="text-blue-600">Mérida</span>
                   </h1>
-                  <p className="text-xs text-slate-500 -mt-1">
-                    Sistema de Mantenimiento
+                  <p className="text-[8px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+                    Sistema CMMS
                   </p>
                 </div>
               </Link>
+
+              {/* Desktop Navigation */}
+              <div className="hidden lg:flex items-center space-x-2">
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isActiveRoute(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-blue-700' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
-              {visibleNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = isActiveRoute(item.path);
-                
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`nav-link flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                    data-testid={`nav-${item.path.replace('/', '')}`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
-                    <span className="text-sm">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* User Info & Actions */}
-            <div className="flex items-center space-x-4">
-              {/* User Profile */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-900" data-testid="user-name">
-                    {user?.full_name}
-                  </p>
-                  <div className="flex items-center justify-end">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleBadgeColor(user?.role)}`}>
-                      {getRoleLabel(user?.role)}
+            {/* Right Section: User Info & Actions */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              
+              {/* User Profile Badge (Desktop) */}
+              <div className="hidden sm:flex items-center space-x-3 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200/60">
+                <ShieldCheck className="w-4 h-4 text-slate-400" />
+                <div className="flex items-center space-x-2">
+                  {user?.full_name && (
+                    <span className="text-sm font-bold text-slate-700">
+                      {user.full_name.split(' ')[0]}
                     </span>
-                  </div>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.full_name?.charAt(0)?.toUpperCase()}
+                  )}
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${getRoleBadgeColor(user?.role)}`}>
+                    {getRoleLabel(user?.role)}
                   </span>
                 </div>
               </div>
@@ -158,13 +154,12 @@ const Navigation = ({ user, onLogout }) => {
               {/* Logout Button */}
               <Button
                 onClick={onLogout}
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="hidden sm:flex items-center space-x-2 border-slate-200 hover:border-red-300 hover:text-red-600 transition-colors"
-                data-testid="logout-button"
+                className="hidden sm:flex items-center space-x-2 text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors rounded-full px-4"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-sm">Salir</span>
+                <span className="text-sm font-semibold">Salir</span>
               </Button>
 
               {/* Mobile Menu Button */}
@@ -172,82 +167,81 @@ const Navigation = ({ user, onLogout }) => {
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-slate-700 hover:text-slate-900 shrink-0"
-                data-testid="mobile-menu-button"
+                className="lg:hidden text-slate-600 hover:text-slate-900 shrink-0 bg-slate-100 rounded-lg h-9 w-9 p-0 flex items-center justify-center"
               >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden glass-dark bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-2xl">
-            <div className="px-4 py-3 space-y-1">
+          <div className="lg:hidden absolute top-16 left-0 right-0 bg-white border-b border-slate-200 shadow-xl origin-top animate-in slide-in-from-top-2 duration-200">
+            <div className="px-4 py-5 sm:py-6 space-y-4">
+              
               {/* User Info Mobile */}
-              <div className="flex items-center space-x-3 px-3 py-2 mb-3 bg-slate-50 rounded-lg" data-testid="mobile-user-info">
-                <div className="w-8 h-8 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.full_name?.charAt(0)?.toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    {user?.full_name}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
+                <div className="flex-1 min-w-0 pr-3">
+                  <p className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                    {user?.full_name || 'Usuario'}
                   </p>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleBadgeColor(user?.role)}`}>
-                    {getRoleLabel(user?.role)}
-                  </span>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    {user?.email}
+                  </p>
                 </div>
+                <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap shrink-0 shadow-sm ${getRoleBadgeColor(user?.role)}`}>
+                  {getRoleLabel(user?.role)}
+                </span>
               </div>
 
               {/* Mobile Navigation Items */}
-              {visibleNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = isActiveRoute(item.path);
-                
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50/50'
-                    }`}
-                    data-testid={`mobile-nav-${item.path.replace('/', '')}`}
-                  >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+              <div className="grid gap-2 sm:gap-3">
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isActiveRoute(item.path);
+                  
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`group flex items-center space-x-3 px-4 py-3.5 rounded-xl font-bold transition-all ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-blue-700' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                      <span className="text-[15px] sm:text-base">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
 
               {/* Mobile Logout */}
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onLogout();
-                }}
-                className="flex items-center space-x-3 px-3 py-3 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-                data-testid="mobile-logout-button"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Cerrar Sesión</span>
-              </button>
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="group flex items-center justify-center space-x-2 w-full px-4 py-3.5 rounded-xl font-bold text-slate-600 bg-slate-50 hover:bg-red-50 hover:text-red-600 transition-colors border border-slate-100 hover:border-red-100 shadow-sm"
+                >
+                  <LogOut className="w-5 h-5 transition-colors text-slate-400 group-hover:text-red-600" />
+                  <span className="text-[15px] sm:text-base">Cerrar Sesión</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-40 md:hidden" 
+          className="fixed inset-0 top-16 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden" 
           onClick={() => setIsMobileMenuOpen(false)}
-          data-testid="mobile-menu-overlay"
         />
       )}
     </>

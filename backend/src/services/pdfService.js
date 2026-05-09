@@ -352,9 +352,21 @@ const buildReportPDF = async (reportId) => {
   doc.rect(sig2X, sigY, sigW, sigH).stroke(C.border);
   doc.fontSize(7).font('Helvetica-Bold').fillColor(C.gray)
      .text('CLIENTE', sig2X + 6, sigY + 5, { width: sigW - 12 });
+  
+  if (report.clientSignature) {
+    try {
+      const base64Data = report.clientSignature.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, 'base64');
+      // Draw image fitting in the box
+      doc.image(buffer, sig2X + 6, sigY + 10, { fit: [sigW - 12, sigH - 25], align: 'center' });
+    } catch (e) {
+      console.error('Error rendering signature in PDF', e);
+    }
+  }
+
   doc.moveTo(sig2X + 15, sigY + 38).lineTo(sig2X + sigW - 15, sigY + 38).stroke(C.border);
   doc.fontSize(8).font('Helvetica').fillColor(C.text)
-     .text(report.clientSignatureName || '___________________', sig2X + 6, sigY + 42, { width: sigW - 12 });
+     .text(report.clientSignatureName || '___________________', sig2X + 6, sigY + 42, { width: sigW - 12, align: 'center' });
 
   doc.y = sigY + sigH + 16;
 

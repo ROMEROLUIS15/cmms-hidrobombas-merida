@@ -71,6 +71,7 @@ const createServiceReport = asyncHandler(async (req, res) => {
     observations,
     technician_name,
     client_signature_name,
+    signature_base64,
     // legacy fields
     description,
     parts_used,
@@ -98,6 +99,7 @@ const createServiceReport = asyncHandler(async (req, res) => {
     observations: observations || null,
     technicianName: technician_name || req.user?.username || null,
     clientSignatureName: client_signature_name || null,
+    clientSignature: signature_base64 || null,
     // legacy
     description: description || observations || 'Reporte de mantenimiento',
     partsUsed: parts_used || null,
