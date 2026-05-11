@@ -7,7 +7,11 @@ export const usePWAInstall = () => {
 
   useEffect(() => {
     // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    const isStandalone = typeof window.matchMedia === 'function' 
+      ? window.matchMedia('(display-mode: standalone)').matches 
+      : false;
+      
+    if (isStandalone || window.navigator.standalone === true) {
       setIsInstalled(true);
     }
 
