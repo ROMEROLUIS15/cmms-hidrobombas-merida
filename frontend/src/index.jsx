@@ -16,9 +16,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
-        console.log('[PWA] Service Worker registrado:', reg.scope);
-
-        // Notify user when a new SW version is available
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           newWorker?.addEventListener('statechange', () => {
@@ -26,11 +23,13 @@ if ('serviceWorker' in navigator) {
               newWorker.state === 'installed' &&
               navigator.serviceWorker.controller
             ) {
-              console.log('[PWA] Nueva versión disponible. Recarga para actualizar.');
+              // New version available, user can reload to update
             }
           });
         });
       })
-      .catch((err) => console.error('[PWA] Error al registrar SW:', err));
+      .catch(() => {
+        // SW registration failed silently
+      });
   });
 }

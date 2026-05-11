@@ -1,6 +1,41 @@
 const asyncHandler = require('express-async-handler');
 const { Equipment, Client, ServiceReport } = require('../models');
 
+const validateUUID = (id) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const getEquipmentById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
+  }
+  
+  const eq = await Equipment.findByPk(id, {
+    include: [
+      { model: Client, as: 'client' },
+      {
+        model: ServiceReport,
+        as: 'reports',
+        attributes: ['id', 'reportNumber', 'reportDate', 'visitType'],
+        order: [['reportDate', 'DESC']],
+        limit: 10
+      }
+    ]
+  });
+
+  if (!eq) {
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
+  }
+  res.status(200).json({ success: true, data: eq });
+});
+
 // ─── GET /api/equipment ───────────────────────────────────────────────────────
 const getEquipment = asyncHandler(async (req, res) => {
   const { clientId } = req.query;
@@ -13,27 +48,6 @@ const getEquipment = asyncHandler(async (req, res) => {
     order: [['name', 'ASC']]
   });
   res.status(200).json({ success: true, data: equipment });
-});
-
-// ─── GET /api/equipment/:id ───────────────────────────────────────────────────
-const getEquipmentById = asyncHandler(async (req, res) => {
-  const eq = await Equipment.findByPk(req.params.id, {
-    include: [
-      { model: Client, as: 'client' },
-      {
-        model: ServiceReport,
-        as: 'serviceReports',
-        attributes: ['id', 'reportNumber', 'reportDate', 'visitType'],
-        order: [['reportDate', 'DESC']],
-        limit: 10
-      }
-    ]
-  });
-
-  if (!eq) {
-    return res.status(404).json({ success: false, message: 'Equipo no encontrado' });
-  }
-  res.status(200).json({ success: true, data: eq });
 });
 
 // ─── POST /api/equipment ──────────────────────────────────────────────────────
@@ -50,9 +64,19 @@ const createEquipment = asyncHandler(async (req, res) => {
 
 // ─── PUT /api/equipment/:id ───────────────────────────────────────────────────
 const updateEquipment = asyncHandler(async (req, res) => {
-  const eq = await Equipment.findByPk(req.params.id);
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
+  }
+  
+  const eq = await Equipment.findByPk(id);
   if (!eq) {
-    return res.status(404).json({ success: false, message: 'Equipo no encontrado' });
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
   }
   await eq.update(req.body);
   res.status(200).json({ success: true, data: eq });
@@ -60,9 +84,19 @@ const updateEquipment = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/equipment/:id ────────────────────────────────────────────────
 const deleteEquipment = asyncHandler(async (req, res) => {
-  const eq = await Equipment.findByPk(req.params.id);
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
+  }
+  
+  const eq = await Equipment.findByPk(id);
   if (!eq) {
-    return res.status(404).json({ success: false, message: 'Equipo no encontrado' });
+    const error = new Error('Equipo no encontrado');
+    error.statusCode = 404;
+    throw error;
   }
   await eq.destroy();
   res.status(200).json({ success: true, message: 'Equipo eliminado exitosamente' });

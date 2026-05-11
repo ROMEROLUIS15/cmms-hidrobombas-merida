@@ -3,7 +3,7 @@
  */
 const errorHandler = (error, req, res, next) => {
   if (process.env.NODE_ENV !== 'test') {
-    console.error('Global error handler caught:', error);
+    console.error('Global error handler caught:', error.message);
   }
 
   // Handle Sequelize validation errors

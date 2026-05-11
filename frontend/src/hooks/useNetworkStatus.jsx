@@ -15,7 +15,7 @@ export const useNetworkStatus = () => {
       // Trigger background sync if supported
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then((sw) => {
-          sw.sync.register('sync-reports').catch(console.warn);
+          sw.sync.register('sync-reports').catch(() => {});
         });
       }
     };
@@ -40,7 +40,7 @@ export const useNetworkStatus = () => {
 
     const handler = (event) => {
       if (event.data?.type === 'REPORT_SYNCED') {
-        console.log('[PWA] Report synced from offline queue:', event.data.id);
+        
       }
     };
 

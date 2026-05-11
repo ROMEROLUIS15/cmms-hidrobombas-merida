@@ -35,12 +35,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password/${token}`;
 
-  // In development, print the link to the console instead of sending an email
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('\n🔑 [DEV] Password reset link for', user.email, ':');
-    console.log('   ', resetUrl, '\n');
-  }
-  // TODO: In production, send email via nodemailer/sendgrid using resetUrl
+  // NOTE: In production, send the email via nodemailer/sendgrid using resetUrl.
+  // In development, check your email service or use a mail trap.
 
   res.status(200).json({
     success: true,

@@ -1,0 +1,4 @@
+{
+  "frontend/src/**/*.{js,jsx}": ["npx eslint --fix -w frontend"],
+  "backend/src/**/*.{js,jsx}": ["npx eslint --fix -w backend"]
+}

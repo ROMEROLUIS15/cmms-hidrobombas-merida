@@ -52,7 +52,6 @@ const register = asyncHandler(async (req, res) => {
     // Generate JWT token
     const token = generateToken(newUser.id, newUser.email, newUser.role);
     
-    console.log('✅ Token JWT generado');
 
     // Return success response
     res.status(201).json({

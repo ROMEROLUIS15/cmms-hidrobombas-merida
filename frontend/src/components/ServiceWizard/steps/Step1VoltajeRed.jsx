@@ -26,35 +26,35 @@ const Step1VoltajeRed = () => {
       <div className="bg-white/50 p-6 rounded-2xl border border-white/60 shadow-sm space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase R-S (V)</Label>
-            <Input type="number" step="0.1" placeholder="220" value={data.voltage_r_s} onChange={(e) => handleChange('voltage_r_s', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase R-S (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_r_s} onChange={(e) => handleChange('voltage_r_s', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase R-N (V)</Label>
-            <Input type="number" step="0.1" placeholder="127" value={data.voltage_r_n} onChange={(e) => handleChange('voltage_r_n', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase R-N (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_r_n} onChange={(e) => handleChange('voltage_r_n', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase S-T (V)</Label>
-            <Input type="number" step="0.1" placeholder="220" value={data.voltage_s_t} onChange={(e) => handleChange('voltage_s_t', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase S-T (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_s_t} onChange={(e) => handleChange('voltage_s_t', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase S-N (V)</Label>
-            <Input type="number" step="0.1" placeholder="127" value={data.voltage_s_n} onChange={(e) => handleChange('voltage_s_n', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase S-N (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_s_n} onChange={(e) => handleChange('voltage_s_n', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase T-R (V)</Label>
-            <Input type="number" step="0.1" placeholder="220" value={data.voltage_t_r} onChange={(e) => handleChange('voltage_t_r', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase T-R (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_t_r} onChange={(e) => handleChange('voltage_t_r', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Fase T-N (V)</Label>
-            <Input type="number" step="0.1" placeholder="127" value={data.voltage_t_n} onChange={(e) => handleChange('voltage_t_n', e.target.value)} className="bg-white/80" />
+            <Label className="text-slate-900 font-bold text-sm">Fase T-N (V)</Label>
+            <Input type="number" step="0.1" placeholder="200" value={data.voltage_t_n} onChange={(e) => handleChange('voltage_t_n', e.target.value)} className="bg-white/80" />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-between mt-8 pt-6 border-t border-slate-200/50">
-        <Button variant="outline" onClick={prevStep} className="bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
-        <Button onClick={nextStep} className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
+      <div className="flex flex-col-reverse sm:flex-row justify-between mt-8 pt-6 border-t border-slate-200/50 gap-3">
+        <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
+        <Button onClick={nextStep} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
       </div>
     </div>
   );

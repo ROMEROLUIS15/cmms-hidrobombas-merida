@@ -15,6 +15,8 @@ import {
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,14 +24,56 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/users`, {
+      const response = await axios.get(`${BACKEND_URL}/api/users`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setUsers(response.data);
       setLoading(false);
     } catch (error) {
+      console.error('Error fetching users:', error.message);
       toast.error('Error al cargar usuarios');
-      setLoading(false);
+    }
+  };
+
+  const toggleUserStatus = async (userId, currentStatus) => {
+    try {
+      await axios.put(`${BACKEND_URL}/api/users/${userId}/status`, 
+        { isActive: !currentStatus },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      fetchUsers();
+      toast.success(currentStatus ? 'Usuario desactivado' : 'Usuario activado');
+    } catch (error) {
+      console.error('Error toggling status:', error.message);
+      toast.error('Error al cambiar estado del usuario');
+    }
+  };
+
+  const updateUserRole = async (userId, newRole) => {
+    try {
+      await axios.put(`${BACKEND_URL}/api/users/${userId}/role`, 
+        { role: newRole },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      fetchUsers();
+      toast.success('Rol actualizado');
+    } catch (error) {
+      console.error('Error updating role:', error.message);
+      toast.error('Error al actualizar rol');
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
+    try {
+      await axios.delete(`${BACKEND_URL}/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchUsers();
+      toast.success('Usuario eliminado');
+    } catch (error) {
+      console.error('Error deleting user:', error.message);
+      toast.error('Error al eliminar usuario');
     }
   };
 
@@ -39,7 +83,7 @@ const UserManagement = () => {
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/users/${userId}/status`, 
+      await axios.put(`${BACKEND_URL}/api/users/${userId}/status`, 
         { isActive: !currentStatus },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -52,7 +96,7 @@ const UserManagement = () => {
 
   const handleChangeRole = async (userId, newRole) => {
     try {
-      await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/users/${userId}/role`, 
+      await axios.put(`${BACKEND_URL}/api/users/${userId}/role`, 
         { role: newRole },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -66,7 +110,7 @@ const UserManagement = () => {
   const handleDeleteUser = async (userId) => {
     if (window.confirm('¿Está seguro de eliminar este usuario permanentemente?')) {
       try {
-        await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/api/users/${userId}`, {
+        await axios.delete(`${BACKEND_URL}/api/users/${userId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         toast.success('Usuario eliminado');
@@ -82,10 +126,6 @@ const UserManagement = () => {
     const emailMatch = u.email ? u.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
     return usernameMatch || emailMatch;
   });
-
-  // Debugging log para ver qué datos llegan del backend
-  console.log("Usuarios cargados desde el backend:", users);
-  console.log("Usuarios filtrados:", filteredUsers);
 
   if (loading) return <div className="p-8 text-center">Cargando gestión de usuarios...</div>;
 

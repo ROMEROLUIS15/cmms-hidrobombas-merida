@@ -16,8 +16,10 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Testing
+# Testing & Coverage
 /coverage
+frontend/coverage/
+backend/coverage/
 
 # Next.js
 /.next/
@@ -29,6 +31,8 @@ next-env.d.ts
 /build
 dist/
 dist
+frontend/dist/
+frontend/build/
 
 # Environment files (comprehensive coverage)
 
@@ -63,6 +67,9 @@ chainlit.md
 
 # Data and databases
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
 database.sqlite
 agenthub/agents/youtube/db
 
@@ -77,6 +84,8 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+.vite/
+frontend/.vite/
 
 # Mobile development
 android-sdk/ -e 

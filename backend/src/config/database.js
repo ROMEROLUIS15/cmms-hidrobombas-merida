@@ -17,7 +17,6 @@ if (isVercel && !databaseUrl) {
 }
 
 const isPostgres = !!databaseUrl;
-console.log('🌐 Database Mode:', isPostgres ? 'POSTGRES' : 'SQLITE');
 
 const sequelize = isPostgres
   ? new Sequelize(databaseUrl, {
@@ -42,7 +41,7 @@ const testConnection = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully');
   } catch (error) {
-    console.error('❌ Unable to connect to database:', error);
+    console.error('❌ Unable to connect to database:', error.message);
     if (!process.env.VERCEL) process.exit(1);
     throw error;
   }
@@ -57,7 +56,7 @@ const initializeDatabase = async () => {
     await sequelize.sync();
     console.log('✅ Database synchronized successfully');
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
+    console.error('❌ Database initialization failed:', error.message);
     if (!process.env.VERCEL) process.exit(1);
     throw error;
   }

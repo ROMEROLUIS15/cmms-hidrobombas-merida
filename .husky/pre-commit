@@ -1,0 +1,9 @@
+echo "\n\033[1;36m🔍 Running lint-staged (ESLint --fix on staged files)...\033[0m\n"
+npx lint-staged
+
+if [ $? -ne 0 ]; then
+  echo "\n\033[1;31m❌ Linting failed. Please fix the errors above before committing.\033[0m\n"
+  exit 1
+fi
+
+echo "\n\033[1;32m✅ Linting passed!\033[0m\n"

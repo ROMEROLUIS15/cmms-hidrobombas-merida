@@ -18,7 +18,7 @@ import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/sonner';
 import OfflineBanner from './components/OfflineBanner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 // Axios interceptor for authentication
@@ -63,8 +63,8 @@ function App() {
       if (token && userData) {
         setUser(JSON.parse(userData));
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } catch {
+      // Auth check silently failed
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     } finally {

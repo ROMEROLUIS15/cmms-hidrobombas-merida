@@ -18,7 +18,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const ClientList = ({ user }) => {
@@ -45,7 +45,7 @@ const ClientList = ({ user }) => {
       const response = await axios.get(`${API}/clients`);
       setClients(response.data?.data || response.data || []);
     } catch (error) {
-      console.error('Error loading clients:', error);
+      console.error('Error loading clients:', error.message);
       toast.error('Error al cargar la lista de clientes');
     } finally {
       setLoading(false);
@@ -76,7 +76,7 @@ const ClientList = ({ user }) => {
       setIsCreateDialogOpen(false);
       toast.success('Cliente creado exitosamente');
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error('Error creating client:', error.message);
       const message = error.response?.data?.detail || 'Error al crear el cliente';
       toast.error(message);
     } finally {

@@ -8,12 +8,20 @@ export const useWizard = () => useContext(WizardContext);
 
 const DRAFT_KEY = 'maintenance_draft';
 
+const getLocalDateString = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const initialData = {
   client_id: '',
   equipment_id: '',
   visit_type: 'mensual',
   system_name: '',
-  report_date: new Date().toISOString().split('T')[0],
+  report_date: getLocalDateString(),
   technician_name: '',
   client_signature_name: '',
   signature_base64: '',
@@ -26,7 +34,7 @@ const initialData = {
     water_level: 'empty',
     float_contact_na: '',
     float_contact_na_2: '',
-    led_empty_tank: false,
+    led_empty_tank: '',
     volts_min: '', volts_max: '',
     time_1: '', time_2: ''
   },
@@ -34,19 +42,19 @@ const initialData = {
   motor_1_data: {
     motor_hp: '', amperage: '', phase_r: '', phase_s: '', phase_t: '',
     bobina_value: '', contactos_value: '', contactor_working: false,
-    thermal_amp: '', thermal_nc: false, thermal_no: false,
+    thermal_amp: '', thermal_nc: '', thermal_no: '',
     motor_temp: '', voluta_temp: '', thermal_temp: ''
   },
   motor_2_data: {
     motor_hp: '', amperage: '', phase_r: '', phase_s: '', phase_t: '',
     bobina_value: '', contactos_value: '', contactor_working: false,
-    thermal_amp: '', thermal_nc: false, thermal_no: false,
+    thermal_amp: '', thermal_nc: '', thermal_no: '',
     motor_temp: '', voluta_temp: '', thermal_temp: ''
   },
   motor_3_data: {
     motor_hp: '', amperage: '', phase_r: '', phase_s: '', phase_t: '',
     bobina_value: '', contactos_value: '', contactor_working: false,
-    thermal_amp: '', thermal_nc: false, thermal_no: false,
+    thermal_amp: '', thermal_nc: '', thermal_no: '',
     motor_temp: '', voluta_temp: '', thermal_temp: ''
   },
 
@@ -93,7 +101,7 @@ export const WizardProvider = ({ children }) => {
           toast.info('Se cargó un borrador guardado localmente', { duration: 3000 });
         }
       } catch (error) {
-        console.error('Error loading draft', error);
+        console.error('Error loading draft:', error.message);
       } finally {
         setDraftLoaded(true);
       }
@@ -104,7 +112,7 @@ export const WizardProvider = ({ children }) => {
   // Save to IndexedDB automatically when formData changes
   useEffect(() => {
     if (draftLoaded) {
-      set(DRAFT_KEY, formData).catch(err => console.error('Error saving draft', err));
+      set(DRAFT_KEY, formData).catch(err => console.error('Error saving draft:', err.message));
     }
   }, [formData, draftLoaded]);
 
@@ -132,7 +140,7 @@ export const WizardProvider = ({ children }) => {
       setFormData(initialData);
       setCurrentStep(0);
     } catch (error) {
-      console.error('Error clearing draft', error);
+      console.error('Error clearing draft:', error.message);
     }
   };
 
@@ -157,7 +165,8 @@ export const WizardProvider = ({ children }) => {
         nextStep,
         prevStep,
         isOffline,
-        clearDraft
+        clearDraft,
+        clearOfflineDraft: clearDraft
       }}
     >
       {children}

@@ -26,27 +26,27 @@ const Step3SupervisorVoltaje = () => {
       <div className="bg-white/50 p-6 rounded-2xl border border-white/60 shadow-sm space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl">
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Volts Mínimo</Label>
+            <Label className="text-slate-900 font-bold text-sm">Volts Mínimo</Label>
             <Input type="number" step="0.1" placeholder="180" value={data.volts_min} onChange={(e) => handleChange('volts_min', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Volts Máximo</Label>
+            <Label className="text-slate-900 font-bold text-sm">Volts Máximo</Label>
             <Input type="number" step="0.1" placeholder="250" value={data.volts_max} onChange={(e) => handleChange('volts_max', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Tiempo 1 (seg)</Label>
+            <Label className="text-slate-900 font-bold text-sm">Tiempo 1 (seg)</Label>
             <Input type="number" step="0.1" placeholder="5" value={data.time_1} onChange={(e) => handleChange('time_1', e.target.value)} className="bg-white/80" />
           </div>
           <div className="space-y-2">
-            <Label className="text-slate-600 font-medium">Tiempo 2 (seg)</Label>
+            <Label className="text-slate-900 font-bold text-sm">Tiempo 2 (seg)</Label>
             <Input type="number" step="0.1" placeholder="10" value={data.time_2} onChange={(e) => handleChange('time_2', e.target.value)} className="bg-white/80" />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-between mt-8 pt-6 border-t border-slate-200/50">
-        <Button variant="outline" onClick={prevStep} className="bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
-        <Button onClick={nextStep} className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
+      <div className="flex flex-col-reverse sm:flex-row justify-between mt-8 pt-6 border-t border-slate-200/50 gap-3">
+        <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
+        <Button onClick={nextStep} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
       </div>
     </div>
   );

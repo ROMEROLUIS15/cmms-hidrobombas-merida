@@ -1,6 +1,18 @@
 const asyncHandler = require('express-async-handler');
 const { ServiceReport, Equipment, Client, User } = require('../models');
 
+const validateUUID = (id) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const getReportById = async (id) => {
+  if (!validateUUID(id)) {
+    return null;
+  }
+  return await ServiceReport.findByPk(id);
+};
+
 // ─── Helper: generate sequential report number ────────────────────────────────
 const generateReportNumber = async () => {
   const count = await ServiceReport.count();
@@ -34,7 +46,15 @@ const getServiceReports = asyncHandler(async (req, res) => {
 
 // ─── GET /api/service-reports/:id ────────────────────────────────────────────
 const getServiceReportById = asyncHandler(async (req, res) => {
-  const report = await ServiceReport.findByPk(req.params.id, {
+  const report = await getReportById(req.params.id);
+
+  if (!report) {
+    const error = new Error('Reporte no encontrado');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const fullReport = await ServiceReport.findByPk(report.id, {
     include: [
       {
         model: Equipment,
@@ -49,11 +69,7 @@ const getServiceReportById = asyncHandler(async (req, res) => {
     ]
   });
 
-  if (!report) {
-    return res.status(404).json({ success: false, message: 'Reporte no encontrado' });
-  }
-
-  res.status(200).json({ success: true, data: report });
+  res.status(200).json({ success: true, data: fullReport });
 });
 
 // ─── POST /api/service-reports ────────────────────────────────────────────────
@@ -72,7 +88,6 @@ const createServiceReport = asyncHandler(async (req, res) => {
     technician_name,
     client_signature_name,
     signature_base64,
-    // legacy fields
     description,
     parts_used,
     recommendations,
@@ -85,7 +100,6 @@ const createServiceReport = asyncHandler(async (req, res) => {
 
   const reportNumber = await generateReportNumber();
 
-  // Consolidate motors data into a single array
   const motorsData = [motor_1_data, motor_2_data, motor_3_data].filter(Boolean);
 
   const report = await ServiceReport.create({
@@ -100,7 +114,6 @@ const createServiceReport = asyncHandler(async (req, res) => {
     technicianName: technician_name || req.user?.username || null,
     clientSignatureName: client_signature_name || null,
     clientSignature: signature_base64 || null,
-    // legacy
     description: description || observations || 'Reporte de mantenimiento',
     partsUsed: parts_used || null,
     recommendations: recommendations || null,
@@ -109,7 +122,6 @@ const createServiceReport = asyncHandler(async (req, res) => {
     userId: req.user?.id || null
   });
 
-  // Return with full associations
   const full = await ServiceReport.findByPk(report.id, {
     include: [
       { model: Equipment, as: 'equipment', include: [{ model: Client, as: 'client' }] },
@@ -122,10 +134,12 @@ const createServiceReport = asyncHandler(async (req, res) => {
 
 // ─── PUT /api/service-reports/:id ────────────────────────────────────────────
 const updateServiceReport = asyncHandler(async (req, res) => {
-  const report = await ServiceReport.findByPk(req.params.id);
+  const report = await getReportById(req.params.id);
 
   if (!report) {
-    return res.status(404).json({ success: false, message: 'Reporte no encontrado' });
+    const error = new Error('Reporte no encontrado');
+    error.statusCode = 404;
+    throw error;
   }
 
   const {
@@ -159,10 +173,12 @@ const updateServiceReport = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/service-reports/:id ─────────────────────────────────────────
 const deleteServiceReport = asyncHandler(async (req, res) => {
-  const report = await ServiceReport.findByPk(req.params.id);
+  const report = await getReportById(req.params.id);
 
   if (!report) {
-    return res.status(404).json({ success: false, message: 'Reporte no encontrado' });
+    const error = new Error('Reporte no encontrado');
+    error.statusCode = 404;
+    throw error;
   }
 
   await report.destroy();
