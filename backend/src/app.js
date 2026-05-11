@@ -2,9 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const { errorHandler } = require('./middleware/errorHandler');
+const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -38,12 +40,16 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key'],
 }));
 
 // Body parsing middleware
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Idempotency middleware
+app.use(idempotencyMiddleware);
 
 // Logging middleware (dev mode: concise colored output)
 if (process.env.NODE_ENV !== 'test') {

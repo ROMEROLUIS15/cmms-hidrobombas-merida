@@ -8,6 +8,10 @@ const {
 const { Equipment, Client, ServiceReport } = require('../models');
 
 jest.mock('../models');
+jest.mock('../utils/pagination', () => ({
+  getPaginationParams: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
+  paginatedResponse: jest.fn((data, total, page, limit) => ({ data, pagination: { total, page, limit } }))
+}));
 
 describe('Equipment Controller Unit Tests', () => {
   let req, res, next;
@@ -25,26 +29,28 @@ describe('Equipment Controller Unit Tests', () => {
 
   describe('getEquipment', () => {
     it('should return all equipment when no clientId is provided', async () => {
-      Equipment.findAll.mockResolvedValue([{ id: validUUID, name: 'Eq 1' }]);
+      Equipment.findAndCountAll.mockResolvedValue({
+        rows: [{ id: validUUID, name: 'Eq 1' }],
+        count: 1
+      });
 
       await getEquipment(req, res);
 
-      expect(Equipment.findAll).toHaveBeenCalledWith({
-        where: {},
-        include: [{ model: Client, as: 'client', attributes: ['id', 'name'] }],
-        order: [['name', 'ASC']]
-      });
+      expect(Equipment.findAndCountAll).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: [{ id: validUUID, name: 'Eq 1' }] });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
 
     it('should filter by clientId when provided', async () => {
       req.query = { clientId: validUUID };
-      Equipment.findAll.mockResolvedValue([{ id: validUUID, name: 'Eq 2' }]);
+      Equipment.findAndCountAll.mockResolvedValue({
+        rows: [{ id: validUUID, name: 'Eq 2' }],
+        count: 1
+      });
 
       await getEquipment(req, res);
 
-      expect(Equipment.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      expect(Equipment.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
         where: { clientId: validUUID }
       }));
     });

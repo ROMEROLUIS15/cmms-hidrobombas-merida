@@ -1,7 +1,8 @@
 const User = require('../models/User');
 const { Op } = require('sequelize');
 const asyncHandler = require('express-async-handler');
-const { generateToken } = require('../utils/jwt');
+const { generateToken, generateRefreshToken } = require('../utils/jwt');
+const { setAuthCookies, clearAuthCookies } = require('../utils/cookie');
 
 /**
  * Registra un nuevo usuario en el sistema.
@@ -51,7 +52,9 @@ const register = asyncHandler(async (req, res) => {
 
     // Generate JWT token
     const token = generateToken(newUser.id, newUser.email, newUser.role);
-    
+    const refreshToken = generateRefreshToken(newUser.id);
+
+    setAuthCookies(res, token, refreshToken);
 
     // Return success response
     res.status(201).json({
@@ -109,6 +112,9 @@ const login = asyncHandler(async (req, res) => {
 
     // Generate JWT token
     const token = generateToken(user.id, user.email, user.role);
+    const refreshToken = generateRefreshToken(user.id);
+
+    setAuthCookies(res, token, refreshToken);
 
     // Return success response
     res.status(200).json({
@@ -136,8 +142,60 @@ const getProfile = asyncHandler(async (req, res) => {
     });
 });
 
+// Logout - clear cookies
+const logout = asyncHandler(async (req, res) => {
+  clearAuthCookies(res);
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully'
+  });
+});
+
+// Refresh token endpoint
+const refreshToken = asyncHandler(async (req, res) => {
+  const refreshTokenValue = req.cookies.refreshToken;
+
+  if (!refreshTokenValue) {
+    return res.status(401).json({
+      success: false,
+      message: 'No refresh token provided'
+    });
+  }
+
+  try {
+    const jwt = require('../utils/jwt');
+    const decoded = jwt.verifyRefreshToken(refreshTokenValue);
+
+    const user = await User.findByPk(decoded.userId);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
+      });
+    }
+
+    const newToken = generateToken(user.id, user.email, user.role);
+    const newRefreshToken = generateRefreshToken(user.id);
+
+    setAuthCookies(res, newToken, newRefreshToken);
+
+    res.status(200).json({
+      success: true,
+      token: newToken
+    });
+  } catch {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired refresh token'
+    });
+  }
+});
+
 module.exports = {
   register,
   login,
-  getProfile
+  getProfile,
+  logout,
+  refreshToken
 };

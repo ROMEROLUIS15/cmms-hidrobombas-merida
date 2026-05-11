@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { ServiceReport, Equipment, Client, User } = require('../models');
+const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -22,7 +23,9 @@ const generateReportNumber = async () => {
 
 // ─── GET /api/service-reports ─────────────────────────────────────────────────
 const getServiceReports = asyncHandler(async (req, res) => {
-  const reports = await ServiceReport.findAll({
+  const { page, limit, offset } = getPaginationParams(req.query);
+
+  const { rows: reports, count: total } = await ServiceReport.findAndCountAll({
     include: [
       {
         model: Equipment,
@@ -38,10 +41,15 @@ const getServiceReports = asyncHandler(async (req, res) => {
         attributes: ['id', 'username', 'email']
       }
     ],
-    order: [['createdAt', 'DESC']]
+    order: [['createdAt', 'DESC']],
+    limit,
+    offset
   });
 
-  res.status(200).json({ success: true, data: reports });
+  res.status(200).json({
+    success: true,
+    ...paginatedResponse(reports, total, page, limit)
+  });
 });
 
 // ─── GET /api/service-reports/:id ────────────────────────────────────────────

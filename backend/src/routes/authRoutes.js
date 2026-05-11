@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, getProfile } = require('../controllers/authController');
+const { register, login, getProfile, logout, refreshToken } = require('../controllers/authController');
 const {
   forgotPassword,
   validateResetToken,
@@ -28,6 +28,8 @@ router.post('/resend-verification', resendVerification);
 
 // ── Protected ────────────────────────────────────────────────────────────────
 router.get('/profile', protect, getProfile);
+router.post('/logout', protect, logout);
+router.post('/refresh-token', refreshToken);
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 router.get('/health', (req, res) => {

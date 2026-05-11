@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const asyncHandler = require('express-async-handler');
 const { User, PasswordResetToken } = require('../models');
 const { Op } = require('sequelize');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -33,9 +34,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await PasswordResetToken.create({ token, expiresAt, userId: user.id });
 
-  // NOTE: In production, send the email via nodemailer/sendgrid using the reset URL.
-  // In development, check your email service or use a mail trap.
-  // URL: `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password/${token}`
+  const emailResult = await sendPasswordResetEmail(user.email, token);
+  console.warn(`📧 Password reset email to ${user.email}:`, emailResult.success ? 'OK' : emailResult.error || 'simulated');
 
   res.status(200).json({
     success: true,

@@ -8,13 +8,17 @@ const {
 const { ServiceReport, Equipment, Client, User } = require('../models');
 
 jest.mock('../models');
+jest.mock('../utils/pagination', () => ({
+  getPaginationParams: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
+  paginatedResponse: jest.fn((data, total, page, limit) => ({ data, pagination: { total, page, limit } }))
+}));
 
 describe('Service Report Controller Unit Tests', () => {
   let req, res, next;
   const validUUID = '123e4567-e89b-12d3-a456-426614174000';
 
   beforeEach(() => {
-    req = { params: {}, body: {}, user: {} };
+    req = { params: {}, body: {}, user: {}, query: {} };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
@@ -25,11 +29,14 @@ describe('Service Report Controller Unit Tests', () => {
 
   describe('getServiceReports', () => {
     it('should return all reports with associations', async () => {
-      ServiceReport.findAll.mockResolvedValue([{ id: validUUID, reportNumber: 'SRV-0001' }]);
+      ServiceReport.findAndCountAll.mockResolvedValue({
+        rows: [{ id: validUUID, reportNumber: 'SRV-0001' }],
+        count: 1
+      });
 
       await getServiceReports(req, res);
 
-      expect(ServiceReport.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      expect(ServiceReport.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
         include: expect.any(Array),
         order: [['createdAt', 'DESC']]
       }));

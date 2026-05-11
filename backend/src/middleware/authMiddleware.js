@@ -2,25 +2,30 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const asyncHandler = require('express-async-handler');
 
-// Protect routes - require valid JWT token
-const protect = asyncHandler(async (req, res, next) => {
-  // Get token from Authorization header
+// Helper to extract token from header or cookie
+const extractToken = (req) => {
+  // First try Authorization header
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied. Authorization token required'
-    });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
   }
 
-  // Extract token
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  // Fall back to cookie
+  if (req.cookies && req.cookies.token) {
+    return req.cookies.token;
+  }
+
+  return null;
+};
+
+// Protect routes - require valid JWT token
+const protect = asyncHandler(async (req, res, next) => {
+  const token = extractToken(req);
 
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Access denied. Token not provided'
+      message: 'Access denied. Authorization token required'
     });
   }
 

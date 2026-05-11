@@ -183,7 +183,7 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
               canvasProps={{
                 className: 'w-full',
                 style: { 
-                  height: '280px',
+                  height: '320px',
                   touchAction: 'none',
                 },
                 onTouchStart: (e) => e.preventDefault(),

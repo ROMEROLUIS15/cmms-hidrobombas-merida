@@ -3,6 +3,7 @@ import { WizardProvider, useWizard } from './WizardContext';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { enqueueReport } from '../../hooks/useOfflineQueue';
+import WizardSuccessScreen from './WizardSuccessScreen';
 
 /** Generates a simple UUID v4 — same helper as useOfflineQueue */
 const uuidv4 = () =>
@@ -26,14 +27,13 @@ import Step10PresionesValvulas from './steps/Step10PresionesValvulas';
 import Step11CiclosRuido from './steps/Step11CiclosRuido';
 import Step12ObservacionesFirma from './steps/Step12ObservacionesFirma';
 
-import { CheckCircle2 } from 'lucide-react';
-
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 const ServiceWizardContent = () => {
   const { currentStep, formData, clearOfflineDraft } = useWizard();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [reportId, setReportId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async () => {
@@ -45,18 +45,17 @@ const ServiceWizardContent = () => {
     const token = localStorage.getItem('token');
 
     // Generate ONE idempotency key for this submission attempt.
-    // It travels with the request (online) and with the queue entry (offline)
-    // so the backend and the queue can both detect duplicates.
     const clientRequestId = uuidv4();
     const reportPayload = { ...formData, _clientRequestId: clientRequestId };
 
     try {
-      await axios.post(`${BACKEND_URL}/api/service-reports`, reportPayload, {
+      const response = await axios.post(`${BACKEND_URL}/api/service-reports`, reportPayload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'X-Idempotency-Key': clientRequestId,
         }
       });
+      setReportId(response.data?.data?.id || null);
       setSuccess(true);
       await clearOfflineDraft();
     } catch (error) {
@@ -68,8 +67,6 @@ const ServiceWizardContent = () => {
 
       if (isNetworkError) {
         try {
-          // enqueueReport is idempotent: passing _clientRequestId prevents
-          // double-enqueue if this block is reached more than once.
           await enqueueReport(reportPayload, token);
           setSuccess(true);
           toast.success('Sin conexión. El reporte se sincronizará automáticamente al reconectar.');
@@ -87,21 +84,10 @@ const ServiceWizardContent = () => {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 animate-in zoom-in duration-500">
-        <div className="bg-emerald-100 p-4 rounded-full mb-6">
-          <CheckCircle2 className="w-16 h-16 text-emerald-600" />
-        </div>
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">¡Reporte Completado!</h2>
-        <p className="text-slate-500 mb-8 max-w-md text-center">
-          El mantenimiento ha sido registrado exitosamente y el PDF ha sido generado con la firma del cliente.
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl shadow-lg transition-all"
-        >
-          Crear Nuevo Reporte
-        </button>
-      </div>
+      <WizardSuccessScreen
+        reportId={reportId}
+        clientEmail={formData.client_email || ''}
+      />
     );
   }
 

@@ -137,6 +137,199 @@ El corazón del sistema. Guía al técnico paso a paso para capturar toda la inf
 ```
 cmms-hidrobombas-merida/                   ← Raíz del monorepo
 ├── package.json                           ← Scripts y workspaces npm
+├── package-lock.json
+├── .gitignore
+├── .gitconfig
+├── .gitattributes
+├── .lintstagedrc
+├── eslint.config.mjs                      ← ESLint raíz
+├── ARCHITECTURE.md                        ← Documentación de arquitectura
+├── README.md
+├── .github/
+│   └── workflows/
+│       └── ci.yml                         ← GitHub Actions CI
+├── .husky/                                ← Git hooks
+│   ├── pre-commit
+│   └── pre-push
+│
+├── backend/                               ← API REST Node.js
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── jest.config.js
+│   ├── jest.setupEnv.js
+│   ├── eslint.config.js
+│   ├── vercel.json                       ← Config Vercel
+│   ├── bootstrap-admin.js                ← Creación interactiva de admin
+│   ├── manage-users.js                   ← Gestión de usuarios CLI
+│   ├── seed-dummy-data.js                ← Poblado completo de la BD
+│   ├── database.sqlite                   ← BD SQLite desarrollo
+│   ├── .env                              ← Variables de entorno
+│   ├── .env.example                      ← Plantilla de variables
+│   ├── .gitignore
+│   ├── src/
+│   │   ├── server.js                     ← Punto de entrada
+│   │   ├── app.js                        ← Express + middlewares globales
+│   │   ├── config/
+│   │   │   └── database.js               ← Conexión Sequelize (Postgres/SQLite)
+│   │   ├── models/
+│   │   │   ├── index.js                  ← Asociaciones entre modelos
+│   │   │   ├── User.js                   ← Usuario del sistema
+│   │   │   ├── Client.js                 ← Cliente de Hidrobombas
+│   │   │   ├── Equipment.js              ← Equipo (bomba, motor, etc.)
+│   │   │   ├── ServiceReport.js          ← Reporte de mantenimiento
+│   │   │   ├── PasswordResetToken.js     ← Token de recuperación de contraseña
+│   │   │   ├── AdminTechnician.js        ← Relación admin-técnico
+│   │   │   ├── TechnicianClient.js       ← Relación técnico-cliente
+│   │   │   └── TechnicianEquipment.js    ← Relación técnico-equipo
+│   │   ├── controllers/
+│   │   │   ├── authController.js         ← Login, registro, perfil
+│   │   │   ├── passwordController.js     ← Forgot/reset password
+│   │   │   ├── clientController.js       ← CRUD clientes
+│   │   │   ├── equipmentController.js    ← CRUD equipos
+│   │   │   ├── serviceReportController.js ← CRUD reportes + auto-numeración
+│   │   │   ├── userController.js         ← Gestión de usuarios (admin)
+│   │   │   ├── dashboardController.js    ← Métricas del dashboard
+│   │   │   ├── pdfController.js          ← Generación de PDF
+│   │   │   └── assignmentController.js   ← Asignaciones técnico-equipo-cliente
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js
+│   │   │   ├── clientRoutes.js
+│   │   │   ├── equipmentRoutes.js
+│   │   │   ├── serviceReportRoutes.js
+│   │   │   ├── userRoutes.js
+│   │   │   ├── dashboardRoutes.js
+│   │   │   └── assignmentRoutes.js       ← Rutas de asignaciones
+│   │   ├── middleware/
+│   │   │   ├── authMiddleware.js         ← Verificación JWT
+│   │   │   ├── errorHandler.js           ← Manejador global de errores
+│   │   │   └── zodMiddleware.js          ← Validación de esquemas Zod
+│   │   ├── services/
+│   │   │   └── pdfService.js             ← Generación de PDF con PDFKit
+│   │   ├── validators/
+│   │   │   └── authValidators.js         ← Esquemas Zod para auth
+│   │   ├── utils/
+│   │   │   └── jwt.js                    ← Helpers de generación de tokens
+│   │   └── __tests__/                    ← Tests (unitarios + integración)
+│   │       ├── setup.js
+│   │       ├── testAuthHelper.js
+│   │       ├── authController.unit.test.js
+│   │       ├── authMiddleware.unit.test.js
+│   │       ├── authValidators.unit.test.js
+│   │       ├── clientController.unit.test.js
+│   │       ├── clientModel.test.js
+│   │       ├── clientRoutes.integration.test.js
+│   │       ├── dashboardController.unit.test.js
+│   │       ├── dashboardRoutes.integration.test.js
+│   │       ├── equipmentController.unit.test.js
+│   │       ├── equipmentRoutes.integration.test.js
+│   │       ├── errorHandler.unit.test.js
+│   │       ├── jwt.unit.test.js
+│   │       ├── passwordController.unit.test.js
+│   │       ├── pdfController.unit.test.js
+│   │       ├── pdfService.unit.test.js
+│   │       ├── serviceReportController.unit.test.js
+│   │       ├── serviceReportRoutes.integration.test.js
+│   │       ├── userRoutes.integration.test.js
+│   │       ├── zodMiddleware.unit.test.js
+│   │       └── e2eExample.test.js
+│   └── tests/
+│       └── health.test.js                ← Test health endpoint
+│
+└── frontend/                              ← SPA React
+    ├── package.json
+    ├── package-lock.json
+    ├── vite.config.js                     ← Config Vite + Vitest + alias @/
+    ├── tailwind.config.js
+    ├── postcss.config.cjs
+    ├── eslint.config.js
+    ├── jest.config.js
+    ├── jsconfig.json                      ← Config JS paths
+    ├── components.json                    ← Config shadcn/ui
+    ├── index.html                         ← Punto de entrada HTML (Vite)
+    ├── .env                               ← Variables de entorno
+    ├── .env.example                       ← Plantilla de variables
+    ├── .gitignore
+    ├── build/                             ← Build de producción
+    │   ├── index.html
+    │   ├── manifest.json
+    │   ├── sw.js
+    │   ├── offline.html
+    │   └── assets/
+    ├── coverage/                          ← Reporte de cobertura tests
+    ├── public/
+    │   ├── manifest.json
+    │   ├── sw.js
+    │   ├── offline.html
+    │   └── logo.jpg
+    ├── __mocks__/                         ← Mocks para tests
+    │   ├── axios.js
+    │   ├── react-router-dom.js
+    │   ├── sonner.js
+    │   └── styleMock.js
+    ├── src/
+    │   ├── index.jsx                     ← Punto de entrada React
+    │   ├── index.css                     ← Estilos globales Tailwind
+    │   ├── App.jsx                       ← Router principal
+    │   ├── App.css                       ← Estilos adicionales
+    │   ├── setupTests.js                 ← Config tests
+    │   ├── components/
+    │   │   ├── Login.jsx                ← Pantalla de inicio de sesión
+    │   │   ├── Dashboard.jsx            ← Vista principal post-login
+    │   │   ├── Navigation.jsx           ← Barra de navegación
+    │   │   ├── ClientList.jsx           ← Gestión de clientes
+    │   │   ├── EquipmentList.jsx        ← Catálogo de equipos
+    │   │   ├── ServiceReports.jsx       ← Historial de reportes
+    │   │   ├── UserManagement.jsx       ← Admin de usuarios
+    │   │   ├── OfflineBanner.jsx        ← Indicador de modo offline
+    │   │   ├── ServiceForm.old.txt      ← Formulario legacy (deprecated)
+    │   │   ├── ServiceWizard/
+    │   │   │   ├── ServiceWizard.jsx    ← Shell del wizard multi-paso
+    │   │   │   ├── WizardContext.jsx    ← Estado global del formulario
+    │   │   │   └── steps/               ← 13+ pasos del reporte técnico
+    │   │   │       ├── Step0General.jsx
+    │   │   │       ├── Step1EnergyWater.jsx
+    │   │   │       ├── Step1VoltajeRed.jsx
+    │   │   │       ├── Step2Motors.jsx
+    │   │   │       ├── Step2NivelAgua.jsx
+    │   │   │       ├── Step3Peripherals.jsx
+    │   │   │       ├── Step3SupervisorVoltaje.jsx
+    │   │   │       ├── Step4InterruptorFlotante.jsx
+    │   │   │       ├── Step4Signature.jsx
+    │   │   │       ├── Step5ConsumoEnergia.jsx
+    │   │   │       ├── Step6Contactores.jsx
+    │   │   │       ├── Step7Termicos.jsx
+    │   │   │       ├── Step8Temperaturas.jsx
+    │   │   │       ├── Step9BreakersReles.jsx
+    │   │   │       ├── Step10PresionesValvulas.jsx
+    │   │   │       ├── Step11CiclosRuido.jsx
+    │   │   │       └── Step12ObservacionesFirma.jsx
+    │   │   ├── auth/                    ← Componentes de autenticación
+    │   │   │   ├── ForgotPassword.jsx
+    │   │   │   ├── ResetPassword.jsx
+    │   │   │   └── VerifyEmail.jsx
+    │   │   └── ui/                      ← Componentes shadcn/ui (40+ componentes)
+    │   │       ├── button.jsx
+    │   │       ├── input.jsx
+    │   │       ├── ... (select, dialog, drawer, etc.)
+    │   │       ├── sonner.jsx
+    │   │       ├── toast.jsx
+    │   │       └── toaster.jsx
+    │   ├── hooks/
+    │   │   ├── useNetworkStatus.jsx     ← Detecta online/offline
+    │   │   ├── useOfflineQueue.jsx       ← Cola de reportes pendientes (IndexedDB)
+    │   │   └── use-toast.jsx             ← Notificaciones toast
+    │   ├── lib/
+    │   │   └── utils.jsx                ← Helper clsx/tailwind-merge
+    │   └── __tests__/                   ← Tests unitarios (Vitest)
+    │       ├── components/
+    │       │   ├── Login.test.jsx
+    │       │   └── ServiceWizard.test.jsx
+    │       └── hooks/
+    │           ├── useNetworkStatus.test.js
+    │           └── useOfflineQueue.test.js
+```
+cmms-hidrobombas-merida/                   ← Raíz del monorepo
+├── package.json                           ← Scripts y workspaces npm
 ├── .gitignore
 ├── README.md
 │

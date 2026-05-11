@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { Equipment, Client, ServiceReport } = require('../models');
+const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,15 +40,22 @@ const getEquipmentById = asyncHandler(async (req, res) => {
 // ─── GET /api/equipment ───────────────────────────────────────────────────────
 const getEquipment = asyncHandler(async (req, res) => {
   const { clientId } = req.query;
+  const { page, limit, offset } = getPaginationParams(req.query);
 
   const where = clientId ? { clientId } : {};
 
-  const equipment = await Equipment.findAll({
+  const { rows: equipment, count: total } = await Equipment.findAndCountAll({
     where,
     include: [{ model: Client, as: 'client', attributes: ['id', 'name'] }],
-    order: [['name', 'ASC']]
+    order: [['name', 'ASC']],
+    limit,
+    offset
   });
-  res.status(200).json({ success: true, data: equipment });
+
+  res.status(200).json({
+    success: true,
+    ...paginatedResponse(equipment, total, page, limit)
+  });
 });
 
 // ─── POST /api/equipment ──────────────────────────────────────────────────────

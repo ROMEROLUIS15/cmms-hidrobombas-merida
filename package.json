@@ -8,13 +8,20 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm start",
-    "start": "npm run dev"
+    "start": "npm run dev",
+    "test": "concurrently \"npm run test:backend\" \"npm run test:frontend\"",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm run test:run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "concurrently": "^8.2.2",
     "husky": "^9.1.7",
     "jest": "^27.5.1",
     "lint-staged": "^17.0.4",
+    "playwright": "^1.60.0",
     "supertest": "^7.2.2"
   },
   "lint-staged": {

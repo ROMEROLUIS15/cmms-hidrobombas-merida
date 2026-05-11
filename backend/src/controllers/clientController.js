@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { Client, Equipment } = require('../models');
+const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -14,10 +15,18 @@ const createNotFoundError = (resource) => {
 
 // ─── GET /api/clients ─────────────────────────────────────────────────────────
 const getClients = asyncHandler(async (req, res) => {
-  const clients = await Client.findAll({
-    order: [['name', 'ASC']]
+  const { page, limit, offset } = getPaginationParams(req.query);
+
+  const { rows: clients, count: total } = await Client.findAndCountAll({
+    order: [['name', 'ASC']],
+    limit,
+    offset
   });
-  res.status(200).json({ success: true, data: clients });
+
+  res.status(200).json({
+    success: true,
+    ...paginatedResponse(clients, total, page, limit)
+  });
 });
 
 // ─── GET /api/clients/:id ─────────────────────────────────────────────────────

@@ -40,7 +40,22 @@ motorsData: DataTypes.TEXT  // "[{phase_r: '8.1', ...}, {phase_r: '7.9', ...}]"
 
 **Justificación:** La estructura de cada paso del wizard puede variar por tipo de equipo. Almacenar como JSON ofrece máxima flexibilidad sin migraciones de esquema.
 
-### 2.2 Arquitectura de capas
+### 2.2 Modelos y Relaciones Many-to-Many
+
+El sistema implementa relaciones **many-to-many** entre entidades mediante tablas intermedias:
+
+| Modelo | Tabla | Propósito |
+|--------|-------|-----------|
+| `AdminTechnician` | `admin_technicians` | Admin/Supervisor gestiona técnicos |
+| `TechnicianClient` | `technician_clients` | Técnico asignado a clientes |
+| `TechnicianEquipment` | `technician_equipment` | Técnico responsable de equipos |
+
+Estas tablas permiten que:
+- Un cliente sea atendido por múltiples técnicos
+- Un equipo tenga múltiples técnicos responsables
+- Un admin supervise múltiples técnicos
+
+### 2.3 Arquitectura de capas
 
 ```
 Request HTTP
@@ -66,6 +81,33 @@ Response HTTP
 | Contraseñas | bcrypt (10 rounds) | `models/User.js` → hook `beforeSave` |
 | CORS | Whitelist de orígenes | `app.js` |
 | Reset tokens | Crypto `randomBytes(32)`, TTL 1h | `passwordController.js` |
+| Asignaciones | Rutas `/api/assignments/*` con rol admin/supervisor | `assignmentRoutes.js` + `assignmentController.js` |
+
+### 2.3.1 Endpoints de Asignaciones
+
+Rutas disponibles en `/api/assignments` (requieren rol `admin` o `supervisor`):
+
+```
+Admin ↔ Technician:
+  GET    /admin/:adminId/technicians
+  GET    /technician/:technicianId/admins
+  POST   /admin-technician          { adminId, technicianId }
+  DELETE /admin/:adminId/technician/:technicianId
+
+Technician ↔ Client:
+  GET    /technician/:technicianId/clients
+  GET    /client/:clientId/technicians
+  POST   /technician-client         { technicianId, clientId }
+  DELETE /technician/:technicianId/client/:clientId
+  GET    /technician-clients
+
+Technician ↔ Equipment:
+  GET    /technician/:technicianId/equipment
+  GET    /equipment/:equipmentId/technicians
+  POST   /technician-equipment      { technicianId, equipmentId }
+  DELETE /technician/:technicianId/equipment/:equipmentId
+  GET    /technician-equipment
+```
 
 ### 2.4 Manejo de errores
 
@@ -95,7 +137,7 @@ El sistema tiene capacidad offline mediante dos hooks personalizados:
 
 **`useNetworkStatus`:** Detecta cambios de conectividad usando los eventos nativos `online`/`offline` del navegador.
 
-**`useOfflineQueue`:** Cuando el técnico está sin conexión y guarda un reporte, la acción se encola en **IndexedDB** via `idb-keyval`. Al recuperar la conexión, la cola se procesa automáticamente.
+**`useOfflineQueue`:** Cuando el técnico está sin conexión y guarda un reporte, la acción se encola en **IndexedDB** via `idb-keyval` (v6.2.2). Al recuperar la conexión, la cola se procesa automáticamente.
 
 ```
 Técnico sin conexión
@@ -162,6 +204,29 @@ import { utils } from '../../../lib/utils';
 ### 3.4 Componentes UI
 
 Los componentes primitivos (botones, inputs, dialogs, etc.) son de **Radix UI**, que provee accesibilidad WAI-ARIA out-of-the-box sin estilos predefinidos. Los estilos son aplicados con TailwindCSS + `class-variance-authority` para variantes.
+
+### 3.5 Firma Digital
+
+La captura de firmas utiliza **`react-signature-canvas`** (v1.1.0-alpha.2), un wrapper de `signature_pad`:
+
+```jsx
+import SignatureCanvas from 'react-signature-canvas';
+
+<SignatureCanvas
+  penColor="black"
+  backgroundColor="rgba(255,255,255,1)"
+  canvasProps={{
+    style: { height: '320px', touchAction: 'none' }
+  }}
+  onEnd={handleCanvasEnd}
+/>
+```
+
+**Consideraciones implementadas:**
+- `touchAction: 'none'` — Previene scroll mientras el usuario firma
+- `backgroundColor` explícito — Evita fondos transparentes que distorsionan la imagen
+- Reconstrucción del canvas — Al entrar al paso de firma se recrea para evitar conflictos con el teclado del móvil
+- Protección contra Backspace — Previene que el botón de retour del hardware borre la firma accidentalmente
 
 ---
 
@@ -267,13 +332,15 @@ chore: actualizar dependencias de seguridad
 
 ## 7. Deuda Técnica Conocida
 
-| Item | Prioridad | Descripción |
-|------|-----------|-------------|
-| Email en reset password | 🔴 Alta | `passwordController` genera el token pero no envía email. Requiere integrar nodemailer o SendGrid. |
-| JWT en localStorage | 🟡 Media | El token JWT se almacena en `localStorage` (vulnerable a XSS). Migrar a `httpOnly cookies`. |
-| Idempotencia backend | 🟡 Media | El header `X-Idempotency-Key` ya se envía desde el frontend pero el backend aún no lo procesa. Implementar tabla de idempotency keys con TTL. |
-| Tests E2E | 🟡 Media | No hay tests end-to-end con Playwright o Cypress. |
-| Paginación | 🟢 Baja | Los endpoints de listado retornan todos los registros sin paginación. |
+✅ **Todo resuelto** - La deuda técnica ha sido implementada:
+
+| Item | Prioridad | Estado | Implementación |
+|------|-----------|--------|----------------|
+| Email en reset password | 🔴 Alta | ✅ Resuelto | `src/services/emailService.js` usa nodemailer con SMTP configurable |
+| JWT en httpOnly cookies | 🟡 Media | ✅ Resuelto | Backend acepta JWT via cookie o header Authorization. Incluye refresh tokens de 7 días |
+| Idempotencia backend | 🟡 Media | ✅ Resuelto | Middleware `idempotencyMiddleware.js` crea tabla `idempotency_keys` con TTL 24h |
+| Tests E2E | 🟡 Media | ✅ Resuelto | Playwright configurado con tests en `e2e/auth.spec.js`. Ejecutar `npm run test:e2e` |
+| Paginación | 🟢 Baja | ✅ Resuelto | Endpoints `/api/clients`, `/api/equipment`, `/api/service-reports` ahora aceptan `?page=1&limit=10` |
 
 ---
 

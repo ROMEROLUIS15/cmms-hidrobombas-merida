@@ -42,7 +42,7 @@ describe('Auth Middleware Unit Tests', () => {
       await protect(req, res, next);
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Access denied. Token not provided'
+        message: 'Access denied. Authorization token required'
       }));
     });
 

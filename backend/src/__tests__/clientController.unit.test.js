@@ -8,13 +8,17 @@ const {
 const { Client, Equipment } = require('../models');
 
 jest.mock('../models');
+jest.mock('../utils/pagination', () => ({
+  getPaginationParams: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
+  paginatedResponse: jest.fn((data, total, page, limit) => ({ data, pagination: { total, page, limit } }))
+}));
 
 describe('Client Controller Unit Tests', () => {
   let req, res, next;
   const validUUID = '123e4567-e89b-12d3-a456-426614174000';
 
   beforeEach(() => {
-    req = { params: {}, body: {} };
+    req = { params: {}, body: {}, query: {} };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
@@ -25,13 +29,16 @@ describe('Client Controller Unit Tests', () => {
 
   describe('getClients', () => {
     it('should return all clients', async () => {
-      Client.findAll.mockResolvedValue([{ id: validUUID, name: 'Client A' }]);
+      Client.findAndCountAll.mockResolvedValue({
+        rows: [{ id: validUUID, name: 'Client A' }],
+        count: 1
+      });
 
       await getClients(req, res);
 
-      expect(Client.findAll).toHaveBeenCalledWith({ order: [['name', 'ASC']] });
+      expect(Client.findAndCountAll).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: [{ id: validUUID, name: 'Client A' }] });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
   });
 

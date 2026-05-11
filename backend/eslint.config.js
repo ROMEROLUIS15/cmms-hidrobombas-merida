@@ -4,6 +4,11 @@ const pluginJs = require('@eslint/js');
 module.exports = [
   pluginJs.configs.recommended,
   {
+    // Ignore test files from strict lint rules — they run under Jest
+    // and legitimately use console for test output.
+    ignores: ['src/__tests__/**'],
+  },
+  {
     languageOptions: {
       globals: {
         ...globals.node,
@@ -13,14 +18,23 @@ module.exports = [
       sourceType: 'commonjs',
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: 'next' }], // Ignore Express `next` parameter if unused
-      'no-console': 'warn', // Allow console.log for now, but warn
-      'eqeqeq': ['error', 'always'], // Require === and !==
-      'no-var': 'error', // Prefer const or let
-      'prefer-const': 'error', // Prefer const if not reassigned
-      'semi': ['error', 'always'], // Require semicolons
-      'quotes': ['error', 'single'], // Prefer single quotes
-      'curly': ['error', 'multi-line'], // Require curly braces for multi-line blocks
+      // Unused vars: error, but allow _ prefix for intentional omissions
+      // and Express `next` parameter by argsIgnorePattern
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^_',
+        argsIgnorePattern: '^(_|next)',
+      }],
+
+      // Console: warn/error are allowed (startup logs, error handling).
+      // console.log is NOT allowed — use console.warn or console.error.
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+
+      'eqeqeq':      ['error', 'always'],
+      'no-var':       'error',
+      'prefer-const': 'error',
+      'semi':         ['error', 'always'],
+      'quotes':       ['error', 'single'],
+      'curly':        ['error', 'multi-line'],
     },
   },
 ];

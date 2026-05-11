@@ -4,6 +4,10 @@ const { generateToken } = require('../utils/jwt');
 
 jest.mock('../models/User');
 jest.mock('../utils/jwt');
+jest.mock('../utils/cookie', () => ({
+  setAuthCookies: jest.fn(),
+  clearAuthCookies: jest.fn()
+}));
 
 describe('Auth Controller Unit Tests', () => {
   let req;
@@ -13,7 +17,8 @@ describe('Auth Controller Unit Tests', () => {
     req = { body: {}, user: {} };
     res = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn()
+      json: jest.fn(),
+      cookie: jest.fn()
     };
     jest.clearAllMocks();
   });
