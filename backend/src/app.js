@@ -11,6 +11,7 @@ const equipmentRoutes = require('./routes/equipmentRoutes');
 const serviceReportRoutes = require('./routes/serviceReportRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const userRoutes = require('./routes/userRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use('/api/equipment', equipmentRoutes);
 app.use('/api/service-reports', serviceReportRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/assignments', assignmentRoutes);
 
 // General health check
 app.get('/api/health', (req, res) => {

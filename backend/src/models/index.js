@@ -3,6 +3,9 @@ const Client = require('./Client');
 const Equipment = require('./Equipment');
 const ServiceReport = require('./ServiceReport');
 const PasswordResetToken = require('./PasswordResetToken');
+const AdminTechnician = require('./AdminTechnician');
+const TechnicianClient = require('./TechnicianClient');
+const TechnicianEquipment = require('./TechnicianEquipment');
 
 // Define associations
 
@@ -22,10 +25,31 @@ ServiceReport.belongsTo(User, { foreignKey: 'userId', as: 'technician' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'resetTokens', onDelete: 'CASCADE' });
 PasswordResetToken.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// AdminTechnician: Admin/Supervisor -> Technician (Many to Many)
+User.hasMany(AdminTechnician, { foreignKey: 'adminId', as: 'adminAssignments' });
+AdminTechnician.belongsTo(User, { foreignKey: 'adminId', as: 'admin' });
+User.hasMany(AdminTechnician, { foreignKey: 'technicianId', as: 'technicianAssignments' });
+AdminTechnician.belongsTo(User, { foreignKey: 'technicianId', as: 'technician' });
+
+// TechnicianClient: Technician -> Client (Many to Many)
+User.hasMany(TechnicianClient, { foreignKey: 'technicianId', as: 'clientAssignments' });
+TechnicianClient.belongsTo(User, { foreignKey: 'technicianId', as: 'technician' });
+Client.hasMany(TechnicianClient, { foreignKey: 'clientId', as: 'technicianAssignments' });
+TechnicianClient.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+
+// TechnicianEquipment: Technician -> Equipment (Many to Many)
+User.hasMany(TechnicianEquipment, { foreignKey: 'technicianId', as: 'equipmentAssignments' });
+TechnicianEquipment.belongsTo(User, { foreignKey: 'technicianId', as: 'technician' });
+Equipment.hasMany(TechnicianEquipment, { foreignKey: 'equipmentId', as: 'technicianAssignments' });
+TechnicianEquipment.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
+
 module.exports = {
   User,
   Client,
   Equipment,
   ServiceReport,
-  PasswordResetToken
+  PasswordResetToken,
+  AdminTechnician,
+  TechnicianClient,
+  TechnicianEquipment
 };
