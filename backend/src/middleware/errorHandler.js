@@ -1,7 +1,7 @@
 /**
  * Global Error Handler Middleware
  */
-const errorHandler = (error, req, res, next) => {
+const errorHandler = (error, req, res, _next) => {
   if (process.env.NODE_ENV !== 'test') {
     console.error('Global error handler caught:', error.message);
   }

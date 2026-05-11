@@ -4,7 +4,7 @@ require('dotenv').config();
 // Forzar la carga de pg para entornos serverless como Vercel
 try {
   require('pg');
-} catch (e) {
+} catch (_e) {
   // Ignorar si falla localmente si no se usa Postgres
 }
 
@@ -39,7 +39,7 @@ const sequelize = isPostgres
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Database connection established successfully');
+    console.warn('✅ Database connection established successfully');
   } catch (error) {
     console.error('❌ Unable to connect to database:', error.message);
     if (!process.env.VERCEL) process.exit(1);
@@ -51,10 +51,8 @@ const testConnection = async () => {
 const initializeDatabase = async () => {
   try {
     await testConnection();
-    // Use sync() without alter:true — SQLite doesn't support ALTER TABLE well.
-    // Use `npm run seed:dummy` (force:true) to rebuild the schema from scratch.
     await sequelize.sync();
-    console.log('✅ Database synchronized successfully');
+    console.warn('✅ Database synchronized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error.message);
     if (!process.env.VERCEL) process.exit(1);
