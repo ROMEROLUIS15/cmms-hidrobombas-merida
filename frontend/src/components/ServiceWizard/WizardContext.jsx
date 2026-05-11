@@ -91,28 +91,46 @@ export const WizardProvider = ({ children }) => {
     };
   }, []);
 
-  // Load draft from IndexedDB on mount
-  useEffect(() => {
-    const loadDraft = async () => {
-      try {
-        const draft = await get(DRAFT_KEY);
-        if (draft) {
-          setFormData(draft);
-          toast.info('Se cargó un borrador guardado localmente', { duration: 3000 });
+  // Load draft only if it was NOT completed and less than 24 hours old
+  // This prevents old completed data from appearing when creating a new maintenance
+  const restoreDraft = useCallback(async () => {
+    try {
+      const draft = await get(DRAFT_KEY);
+      if (draft) {
+        if (draft._completedAt) {
+          await del(DRAFT_KEY);
+          setDraftLoaded(true);
+          return;
         }
-      } catch (error) {
-        console.error('Error loading draft:', error.message);
-      } finally {
-        setDraftLoaded(true);
+        const draftAge = Date.now() - new Date(draft._createdAt || 0).getTime();
+        const MAX_DRAFT_AGE = 24 * 60 * 60 * 1000;
+        if (draftAge > MAX_DRAFT_AGE) {
+          await del(DRAFT_KEY);
+          setDraftLoaded(true);
+          return;
+        }
+        setFormData(draft);
+        toast.info('Se recuperó un borrador guardado - mantenimiento incompleto', { duration: 3000 });
       }
-    };
-    loadDraft();
+    } catch (error) {
+      console.error('Error loading draft:', error.message);
+    } finally {
+      setDraftLoaded(true);
+    }
   }, []);
+
+  useEffect(() => {
+    restoreDraft();
+  }, [restoreDraft]);
 
   // Save to IndexedDB automatically when formData changes
   useEffect(() => {
     if (draftLoaded) {
-      set(DRAFT_KEY, formData).catch(err => console.error('Error saving draft:', err.message));
+      const dataToSave = {
+        ...formData,
+        _createdAt: formData._createdAt || new Date().toISOString()
+      };
+      set(DRAFT_KEY, dataToSave).catch(err => console.error('Error saving draft:', err.message));
     }
   }, [formData, draftLoaded]);
 
@@ -141,6 +159,8 @@ export const WizardProvider = ({ children }) => {
       setCurrentStep(0);
     } catch (error) {
       console.error('Error clearing draft:', error.message);
+      setFormData(initialData);
+      setCurrentStep(0);
     }
   };
 

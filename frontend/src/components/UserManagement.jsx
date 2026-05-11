@@ -17,6 +17,7 @@ const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchUsers = async () => {
@@ -26,9 +27,15 @@ const UserManagement = () => {
       });
       setUsers(response.data);
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching users:', error.message);
-      toast.error('Error al cargar usuarios');
+    } catch (err) {
+      console.error('Error fetching users:', err.message);
+      const status = err.response?.status;
+      if (status === 403 || status === 401) {
+        setError('No tienes permiso para acceder a esta sección. Solo los administradores pueden gestionar usuarios.');
+      } else {
+        setError('Error al cargar usuarios. Intenta de nuevo más tarde.');
+      }
+      setLoading(false);
     }
   };
 
@@ -36,6 +43,20 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  if (loading) return <div className="p-8 text-center">Cargando gestión de usuarios...</div>;
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Acceso Restringido</h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
