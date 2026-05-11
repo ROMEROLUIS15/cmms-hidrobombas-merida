@@ -152,6 +152,10 @@ cmms-hidrobombas-merida/                   ← Raíz del monorepo
 │   ├── pre-commit
 │   └── pre-push
 │
+├── e2e/                                 ← Tests E2E Playwright
+│   └── auth.spec.js                    ← Tests de autenticación
+├── playwright.config.js               ← Configuración de Playwright
+│
 ├── backend/                               ← API REST Node.js
 │   ├── package.json
 │   ├── package-lock.json
@@ -180,16 +184,17 @@ cmms-hidrobombas-merida/                   ← Raíz del monorepo
 │   │   │   ├── PasswordResetToken.js     ← Token de recuperación de contraseña
 │   │   │   ├── AdminTechnician.js        ← Relación admin-técnico
 │   │   │   ├── TechnicianClient.js       ← Relación técnico-cliente
-│   │   │   └── TechnicianEquipment.js    ← Relación técnico-equipo
+│   │   │   ├── TechnicianEquipment.js    ← Relación técnico-equipo
+│   │   │   └── IdempotencyKey.js         ← Keys para idempotencia
 │   │   ├── controllers/
-│   │   │   ├── authController.js         ← Login, registro, perfil
+│   │   │   ├── authController.js         ← Login, registro, perfil, logout, refresh
 │   │   │   ├── passwordController.js     ← Forgot/reset password
 │   │   │   ├── clientController.js       ← CRUD clientes
 │   │   │   ├── equipmentController.js    ← CRUD equipos
 │   │   │   ├── serviceReportController.js ← CRUD reportes + auto-numeración
 │   │   │   ├── userController.js         ← Gestión de usuarios (admin)
 │   │   │   ├── dashboardController.js    ← Métricas del dashboard
-│   │   │   ├── pdfController.js          ← Generación de PDF
+│   │   │   ├── pdfController.js          ← PDF + email de reportes
 │   │   │   └── assignmentController.js   ← Asignaciones técnico-equipo-cliente
 │   │   ├── routes/
 │   │   │   ├── authRoutes.js
@@ -200,16 +205,20 @@ cmms-hidrobombas-merida/                   ← Raíz del monorepo
 │   │   │   ├── dashboardRoutes.js
 │   │   │   └── assignmentRoutes.js       ← Rutas de asignaciones
 │   │   ├── middleware/
-│   │   │   ├── authMiddleware.js         ← Verificación JWT
+│   │   │   ├── authMiddleware.js         ← Verificación JWT (header + cookies)
 │   │   │   ├── errorHandler.js           ← Manejador global de errores
-│   │   │   └── zodMiddleware.js          ← Validación de esquemas Zod
+│   │   │   ├── zodMiddleware.js          ← Validación de esquemas Zod
+│   │   │   └── idempotencyMiddleware.js  ← Middleware de idempotencia
 │   │   ├── services/
-│   │   │   └── pdfService.js             ← Generación de PDF con PDFKit
+│   │   │   ├── pdfService.js             ← Generación de PDF con PDFKit
+│   │   │   └── emailService.js           ← Envío de emails (nodemailer)
 │   │   ├── validators/
 │   │   │   └── authValidators.js         ← Esquemas Zod para auth
 │   │   ├── utils/
-│   │   │   └── jwt.js                    ← Helpers de generación de tokens
-│   │   └── __tests__/                    ← Tests (unitarios + integración)
+│   │   │   ├── jwt.js                    ← Helpers de JWT (token + refresh)
+│   │   │   ├── cookie.js                 ← Helpers de cookies httpOnly
+│   │   │   └── pagination.js             ← Helper de paginación
+│   │   └── __tests__/                    ← Tests (unitarios + integración) - 160 tests
 │   │       ├── setup.js
 │   │       ├── testAuthHelper.js
 │   │       ├── authController.unit.test.js
@@ -741,9 +750,10 @@ npm run test:coverage
 
 | Suite | Tests | Framework |
 |-------|-------|-----------|
-| Frontend — Componentes y Hooks | 28+ | Vitest + Testing Library |
-| Backend — Unitarios (modelos, utils) | ~50 | Jest |
-| Backend — Integración (rutas HTTP) | ~100 | Jest + Supertest |
+| Frontend — Componentes y Hooks | 43 | Vitest + Testing Library |
+| Backend — Unitarios (modelos, controllers, utils) | 90+ | Jest |
+| Backend — Integración (rutas HTTP) | 70+ | Jest + Supertest |
+| **Total** | **203** | |
 
 ### Arquitectura de tests del Backend
 

@@ -129,7 +129,79 @@ const sendWelcomeEmail = async (email, name) => {
   }
 };
 
+const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
+  const transporter = createTransporter();
+
+  if (!transporter) {
+    console.warn(`[EmailService] SMTP not configured — simulating report email for ${clientEmail}`);
+    return { simulated: true };
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
+  const reportUrl = `${frontendUrl}/service-reports/${report.id}`;
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: clientEmail,
+    subject: `📋 Reporte de Servicio ${report.reportNumber} - Hidrobombas Mérida`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; border-radius: 10px;">
+          <h1 style="color: #ffffff; margin: 0;">Hidrobombas Mérida</h1>
+          <p style="color: #e0e0e0; margin-top: 10px;">Sistema de Gestión de Mantenimiento</p>
+        </div>
+        
+        <div style="padding: 30px; background: #f9f9f9; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #333;">Reporte de Servicio: ${report.reportNumber}</h2>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Fecha:</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${new Date(report.reportDate).toLocaleDateString()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Tipo de Visita:</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${report.visitType}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Equipo:</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${report.equipment?.name || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Técnico:</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${report.technician?.username || 'N/A'}</td>
+            </tr>
+          </table>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${reportUrl}" 
+               style="background: #2d5a87; color: #ffffff; padding: 15px 30px; 
+                      text-decoration: none; border-radius: 5px; display: inline-block;
+                      font-weight: bold;">
+              Ver Reporte Completo
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 11px;">
+            Este es un correo automático. Si tienes alguna pregunta, contacta a Hidrobombas Mérida.
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.warn(`[EmailService] Service report email sent: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending service report email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendPasswordResetEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  sendServiceReportEmail
 };

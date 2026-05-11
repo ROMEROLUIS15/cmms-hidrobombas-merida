@@ -7,8 +7,7 @@ const {
   updateServiceReport,
   deleteServiceReport
 } = require('../controllers/serviceReportController');
-const { downloadReportPDF } = require('../controllers/pdfController');
-const { sendReportByEmail } = require('../controllers/emailController');
+const { downloadReportPDF, sendReportByEmail } = require('../controllers/pdfController');
 const { protect } = require('../middleware/authMiddleware');
 
 // All routes require authentication
