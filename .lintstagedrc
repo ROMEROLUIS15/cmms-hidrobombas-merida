@@ -1,0 +1,4 @@
+{
+  "frontend/src/**/*.{js,jsx}": ["cd frontend && eslint --fix"],
+  "backend/src/**/*.{js,jsx}": ["cd backend && eslint --fix"]
+}

@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const ServiceReports = ({ user }) => {
@@ -47,7 +47,7 @@ const ServiceReports = ({ user }) => {
 
       setReports(parsed);
     } catch (err) {
-      console.error('Error loading reports:', err);
+      console.error('Error loading reports:', err.message);
       toast.error('Error al cargar los reportes');
     } finally {
       setLoading(false);
@@ -98,7 +98,7 @@ const ServiceReports = ({ user }) => {
 
       toast.success('PDF descargado exitosamente', { id: toastId });
     } catch (err) {
-      console.error('Error PDF:', err);
+      console.error('Error PDF:', err.message);
       toast.error('Error al generar el PDF', { id: toastId });
     }
   };

@@ -28,21 +28,24 @@ const seedData = async () => {
       username: process.env.SEED_ADMIN_NAME     || 'Administrador',
       email:    process.env.SEED_ADMIN_EMAIL,
       password: process.env.SEED_ADMIN_PASSWORD,
-      role: 'admin'
+      role: 'admin',
+      isActive: true
     });
 
     const tecnico1 = await User.create({
       username: process.env.SEED_TECH_NAME     || 'Técnico 1',
       email:    process.env.SEED_TECH_EMAIL,
       password: process.env.SEED_TECH_PASSWORD,
-      role: 'technician'
+      role: 'technician',
+      isActive: true
     });
 
     const tecnico2 = await User.create({
       username: process.env.SEED_TECH_2_NAME   || 'Técnico 2',
       email:    process.env.SEED_TECH_2_EMAIL,
       password: process.env.SEED_TECH_2_PASSWORD,
-      role: 'technician'
+      role: 'technician',
+      isActive: true
     });
 
     console.log(`  ✅ Admin: ${admin.email}`);

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { useWizard } from '../WizardContext';
 import { Label } from '../../ui/label';
@@ -6,6 +6,7 @@ import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Button } from '../../ui/button';
 import { ArrowLeft, CheckCircle2, Eraser, PenTool } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
   const { formData, updateFormData, prevStep } = useWizard();
@@ -13,16 +14,38 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
   const [sigCleared, setSigCleared] = useState(!formData.signature_base64);
 
   const clearSignature = () => {
-    sigCanvas.current.clear();
+    if (sigCanvas.current) sigCanvas.current.clear();
     updateFormData(null, 'signature_base64', '');
     setSigCleared(true);
   };
 
   const saveSignature = () => {
-    if (sigCanvas.current.isEmpty()) return;
-    const dataUrl = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return;
+    const dataUrl = sigCanvas.current.getCanvas().toDataURL('image/png');
     updateFormData(null, 'signature_base64', dataUrl);
     setSigCleared(false);
+  };
+
+  const isReady = Boolean(formData.signature_base64) && Boolean(formData.client_signature_name && formData.client_signature_name.trim().length > 0);
+
+  const handleSaveClick = () => {
+    // Force capture signature just in case onEnd didn't fire
+    let currentSignature = formData.signature_base64;
+    if (!currentSignature && sigCanvas.current && !sigCanvas.current.isEmpty()) {
+      currentSignature = sigCanvas.current.getCanvas().toDataURL('image/png');
+      updateFormData(null, 'signature_base64', currentSignature);
+      setSigCleared(false);
+    }
+
+    if (!formData.client_signature_name || formData.client_signature_name.trim().length === 0) {
+      toast.error('Falta información: Por favor ingrese el nombre de la persona encargada.');
+      return;
+    }
+    if (!currentSignature) {
+      toast.error('Falta información: Por favor registre la firma de conformidad en el recuadro.');
+      return;
+    }
+    onSubmit();
   };
 
   return (
@@ -39,7 +62,7 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4 bg-white/50 p-6 rounded-2xl border border-white/60 shadow-sm flex flex-col">
-          <h4 className="font-semibold text-slate-800">Observaciones Generales</h4>
+          <h4 className="font-bold text-slate-900">Observaciones Generales</h4>
           <Textarea 
             placeholder="Ingrese repuestos requeridos o recomendaciones (Opcional)..."
             value={formData.observations}
@@ -49,7 +72,7 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
         </div>
 
         <div className="space-y-4 bg-white/50 p-6 rounded-2xl border border-white/60 shadow-sm">
-          <h4 className="font-semibold text-slate-800 flex items-center justify-between">
+          <h4 className="font-bold text-slate-900 flex items-center justify-between">
             <span>Firma de Conformidad</span>
             {formData.signature_base64 && !sigCleared && (
               <span className="text-emerald-600 text-sm flex items-center bg-emerald-50 px-2 py-1 rounded-full">
@@ -60,7 +83,7 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Nombre de quien recibe el trabajo *</Label>
+              <Label className="text-slate-900 font-bold text-sm">Nombre de persona encargada *</Label>
               <Input 
                 placeholder="Nombre y Apellido"
                 value={formData.client_signature_name}
@@ -92,14 +115,18 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
         </div>
       </div>
 
-      <div className="flex justify-between mt-8 pt-6 border-t border-slate-200/50">
-        <Button variant="outline" onClick={prevStep} className="bg-white hover:bg-slate-50" disabled={isSubmitting}>
+      <div className="flex flex-col-reverse sm:flex-row justify-between mt-8 pt-6 border-t border-slate-200/50 gap-4">
+        <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto bg-white hover:bg-slate-50" disabled={isSubmitting}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
         </Button>
         <Button 
-          onClick={onSubmit}
-          disabled={isSubmitting || !formData.signature_base64 || !formData.client_signature_name}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
+          onClick={handleSaveClick}
+          disabled={isSubmitting}
+          className={`w-full sm:w-auto px-8 rounded-xl shadow-lg transition-all hover:scale-105 text-white ${
+            isReady 
+            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30' 
+            : 'bg-emerald-300 hover:bg-emerald-400 cursor-pointer shadow-none'
+          }`}
         >
           {isSubmitting ? 'Guardando...' : (
             <span className="flex items-center"><CheckCircle2 className="w-5 h-5 mr-2" /> Guardar y Finalizar</span>

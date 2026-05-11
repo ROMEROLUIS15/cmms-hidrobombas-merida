@@ -18,7 +18,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const Dashboard = ({ user }) => {
@@ -48,7 +48,7 @@ const Dashboard = ({ user }) => {
       setRecentEquipment(equipmentResponse.data?.data?.slice(0, 5) || []);
       
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error loading dashboard data:', error.message);
       toast.error('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);

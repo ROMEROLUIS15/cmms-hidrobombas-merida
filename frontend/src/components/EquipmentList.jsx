@@ -21,7 +21,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const EquipmentList = ({ user }) => {
@@ -57,7 +57,7 @@ const EquipmentList = ({ user }) => {
       setEquipment(equipmentResponse.data?.data || equipmentResponse.data || []);
       setClients(clientsResponse.data?.data || clientsResponse.data || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading data:', error.message);
       toast.error('Error al cargar los datos');
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ const EquipmentList = ({ user }) => {
       setIsCreateDialogOpen(false);
       toast.success('Equipo registrado exitosamente');
     } catch (error) {
-      console.error('Error creating equipment:', error);
+      console.error('Error creating equipment:', error.message);
       const message = error.response?.data?.detail || 'Error al registrar el equipo';
       toast.error(message);
     } finally {

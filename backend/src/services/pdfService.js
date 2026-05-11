@@ -360,7 +360,7 @@ const buildReportPDF = async (reportId) => {
       // Draw image fitting in the box
       doc.image(buffer, sig2X + 6, sigY + 10, { fit: [sigW - 12, sigH - 25], align: 'center' });
     } catch (e) {
-      console.error('Error rendering signature in PDF', e);
+      console.error('Error rendering signature in PDF:', e.message);
     }
   }
 

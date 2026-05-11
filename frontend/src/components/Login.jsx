@@ -10,7 +10,7 @@ import { Wrench, User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'luc
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 // Logo import removed

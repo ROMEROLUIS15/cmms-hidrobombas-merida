@@ -8,6 +8,13 @@ const DB_NAME    = 'hidrobombas-offline';
 const DB_VERSION = 1;
 const STORE      = 'pendingReports';
 
+/** Generates a simple UUID v4 without external dependencies */
+const uuidv4 = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+
 // ── IndexedDB helpers ─────────────────────────────────────────────────────────
 
 /**
@@ -65,24 +72,39 @@ const dbDelete = async (id) => {
 
 /**
  * Enqueue a report for later sync.
+ * Idempotent: if a report with the same clientRequestId is already queued,
+ * it will NOT be added again (prevents duplicates on double-tap / retry).
+ *
  * @param {Object} reportData  — the form data to submit
  * @param {string} token       — the JWT token to replay with
- * @returns {number} queued item ID
+ * @returns {{ id: number, clientRequestId: string }} queued item metadata
  */
 export const enqueueReport = async (reportData, token) => {
+  // Generate a stable idempotency key for this specific report attempt
+  const clientRequestId = reportData._clientRequestId || uuidv4();
+  const reportWithId = { ...reportData, _clientRequestId: clientRequestId };
+
+  // Deduplication: check if a report with the same clientRequestId already exists
+  const existing = await dbGetAll();
+  const duplicate = existing.find((item) => item.clientRequestId === clientRequestId);
+  if (duplicate) {
+    return { id: duplicate.id, clientRequestId };
+  }
+
   const id = await dbAdd({
-    data:      reportData,
+    data:            reportWithId,
     token,
-    queuedAt:  new Date().toISOString(),
+    clientRequestId,
+    queuedAt:        new Date().toISOString(),
   });
 
   // Register background sync if available
   if ('serviceWorker' in navigator && 'SyncManager' in window) {
     const sw = await navigator.serviceWorker.ready;
-    await sw.sync.register('sync-reports').catch(console.warn);
+    await sw.sync.register('sync-reports').catch(() => {});
   }
 
-  return id;
+  return { id, clientRequestId };
 };
 
 /**

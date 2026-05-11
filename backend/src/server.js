@@ -14,27 +14,26 @@ const startServer = async () => {
       await initializeDatabase();
     } else {
       app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📱 Environment: ${process.env.NODE_ENV}`);
-        console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-        console.log('📍 Auth routes mounted at: /api/auth');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`🚀 Server ready [${process.env.NODE_ENV || 'development'}]`);
+        }
       });
     }
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Failed to start server:', error.message);
     if (!process.env.VERCEL) process.exit(1);
   }
 };
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
   if (!process.env.VERCEL) process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error.message);
   if (!process.env.VERCEL) process.exit(1);
 });
 

@@ -10,7 +10,8 @@ const { Client, Equipment } = require('../models');
 jest.mock('../models');
 
 describe('Client Controller Unit Tests', () => {
-  let req, res;
+  let req, res, next;
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
 
   beforeEach(() => {
     req = { params: {}, body: {} };
@@ -18,41 +19,49 @@ describe('Client Controller Unit Tests', () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
     };
+    next = jest.fn();
     jest.clearAllMocks();
   });
 
   describe('getClients', () => {
     it('should return all clients', async () => {
-      Client.findAll.mockResolvedValue([{ id: 1, name: 'Client A' }]);
+      Client.findAll.mockResolvedValue([{ id: validUUID, name: 'Client A' }]);
 
       await getClients(req, res);
 
       expect(Client.findAll).toHaveBeenCalledWith({ order: [['name', 'ASC']] });
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: [{ id: 1, name: 'Client A' }] });
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: [{ id: validUUID, name: 'Client A' }] });
     });
   });
 
   describe('getClientById', () => {
     it('should return client if found', async () => {
-      req.params = { id: 1 };
-      Client.findByPk.mockResolvedValue({ id: 1, name: 'Client A' });
+      req.params = { id: validUUID };
+      Client.findByPk.mockResolvedValue({ id: validUUID, name: 'Client A' });
 
-      await getClientById(req, res);
+      await getClientById(req, res, next);
 
-      expect(Client.findByPk).toHaveBeenCalledWith(1, expect.any(Object));
+      expect(Client.findByPk).toHaveBeenCalledWith(validUUID, expect.any(Object));
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
 
-    it('should return 404 if client not found', async () => {
-      req.params = { id: 99 };
+    it('should call next with error if client not found', async () => {
+      req.params = { id: validUUID };
       Client.findByPk.mockResolvedValue(null);
 
-      await getClientById(req, res);
+      await getClientById(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
+    });
+
+    it('should call next with error for invalid UUID format', async () => {
+      req.params = { id: '999' };
+
+      await getClientById(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
     });
   });
 
@@ -60,7 +69,7 @@ describe('Client Controller Unit Tests', () => {
     it('should return 400 if name is missing', async () => {
       req.body = { email: 'client@example.com' };
 
-      await createClient(req, res);
+      await createClient(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
@@ -68,9 +77,9 @@ describe('Client Controller Unit Tests', () => {
 
     it('should create client successfully', async () => {
       req.body = { name: 'Client A', email: 'client@example.com' };
-      Client.create.mockResolvedValue({ id: 1, name: 'Client A' });
+      Client.create.mockResolvedValue({ id: validUUID, name: 'Client A' });
 
-      await createClient(req, res);
+      await createClient(req, res, next);
 
       expect(Client.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Client A' }));
       expect(res.status).toHaveBeenCalledWith(201);
@@ -79,49 +88,65 @@ describe('Client Controller Unit Tests', () => {
   });
 
   describe('updateClient', () => {
-    it('should return 404 if not found', async () => {
-      req.params = { id: 99 };
+    it('should call next with error if not found', async () => {
+      req.params = { id: validUUID };
       Client.findByPk.mockResolvedValue(null);
 
-      await updateClient(req, res);
+      await updateClient(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(404);
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
     });
 
     it('should update client if found', async () => {
-      req.params = { id: 1 };
+      req.params = { id: validUUID };
       req.body = { name: 'Client B' };
       const mockClient = { update: jest.fn().mockResolvedValue() };
       Client.findByPk.mockResolvedValue(mockClient);
 
-      await updateClient(req, res);
+      await updateClient(req, res, next);
 
       expect(mockClient.update).toHaveBeenCalledWith({ name: 'Client B' });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
+
+    it('should call next with error for invalid UUID format', async () => {
+      req.params = { id: '999' };
+
+      await updateClient(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
+    });
   });
 
   describe('deleteClient', () => {
-    it('should return 404 if not found', async () => {
-      req.params = { id: 99 };
+    it('should call next with error if not found', async () => {
+      req.params = { id: validUUID };
       Client.findByPk.mockResolvedValue(null);
 
-      await deleteClient(req, res);
+      await deleteClient(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(404);
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
     });
 
     it('should delete client if found', async () => {
-      req.params = { id: 1 };
+      req.params = { id: validUUID };
       const mockClient = { destroy: jest.fn().mockResolvedValue() };
       Client.findByPk.mockResolvedValue(mockClient);
 
-      await deleteClient(req, res);
+      await deleteClient(req, res, next);
 
       expect(mockClient.destroy).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
+
+    it('should call next with error for invalid UUID format', async () => {
+      req.params = { id: '999' };
+
+      await deleteClient(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
     });
   });
 });

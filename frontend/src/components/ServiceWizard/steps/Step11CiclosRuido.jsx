@@ -26,54 +26,54 @@ const Step11CiclosRuido = () => {
       <div className="bg-white/50 p-6 rounded-2xl border border-white/60 shadow-sm space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-4">
-            <h3 className="font-semibold text-slate-700 bg-slate-100 py-1 px-3 rounded-md inline-block">Bomba 1</h3>
+            <h3 className="font-bold text-white bg-slate-900 py-2 px-4 rounded-md inline-block tracking-wide">Bomba 1</h3>
             <div className="space-y-2">
-              <Label className="text-slate-600">Tiempo ON (min)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Tiempo ON (min)</Label>
               <Input type="number" step="0.1" value={data.pump_1_on_minutes} onChange={(e) => handleChange('pump_1_on_minutes', e.target.value)} className="bg-white/80" />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-600">Tiempo Reposo (min)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Tiempo Reposo (min)</Label>
               <Input type="number" step="0.1" value={data.pump_1_rest_minutes} onChange={(e) => handleChange('pump_1_rest_minutes', e.target.value)} className="bg-white/80" />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-600">Ruido (dB)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Ruido (dB)</Label>
               <Input placeholder="Ej. Normal" value={data.pump_1_noise_db} onChange={(e) => handleChange('pump_1_noise_db', e.target.value)} className="bg-white/80" />
             </div>
           </div>
           
           <div className="space-y-4">
-            <h3 className="font-semibold text-slate-700 bg-slate-100 py-1 px-3 rounded-md inline-block">Bomba 2</h3>
+            <h3 className="font-bold text-white bg-slate-900 py-2 px-4 rounded-md inline-block tracking-wide">Bomba 2</h3>
             <div className="space-y-2">
-              <Label className="text-slate-600">Tiempo ON (min)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Tiempo ON (min)</Label>
               <Input type="number" step="0.1" value={data.pump_2_on_minutes} onChange={(e) => handleChange('pump_2_on_minutes', e.target.value)} className="bg-white/80" />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-600">Tiempo Reposo (min)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Tiempo Reposo (min)</Label>
               <Input type="number" step="0.1" value={data.pump_2_rest_minutes} onChange={(e) => handleChange('pump_2_rest_minutes', e.target.value)} className="bg-white/80" />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-600">Ruido (dB)</Label>
+              <Label className="text-slate-900 font-bold text-sm">Ruido (dB)</Label>
               <Input placeholder="Ej. Normal" value={data.pump_2_noise_db} onChange={(e) => handleChange('pump_2_noise_db', e.target.value)} className="bg-white/80" />
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-slate-700 bg-slate-100 py-1 px-3 rounded-md inline-block">Compresor (Opcional)</h3>
+            <h3 className="font-bold text-white bg-slate-900 py-2 px-4 rounded-md inline-block tracking-wide">Compresor (Opcional)</h3>
             <div className="space-y-2">
-              <Label className="text-slate-600">Aceite</Label>
+              <Label className="text-slate-900 font-bold text-sm">Aceite</Label>
               <Input placeholder="OK / Nivel Bajo" value={data.compressor_oil} onChange={(e) => handleChange('compressor_oil', e.target.value)} className="bg-white/80" />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-600">Correa</Label>
+              <Label className="text-slate-900 font-bold text-sm">Correa</Label>
               <Input placeholder="OK / Floja" value={data.compressor_belt} onChange={(e) => handleChange('compressor_belt', e.target.value)} className="bg-white/80" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-between mt-8 pt-6 border-t border-slate-200/50">
-        <Button variant="outline" onClick={prevStep} className="bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
-        <Button onClick={nextStep} className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
+      <div className="flex flex-col-reverse sm:flex-row justify-between mt-8 pt-6 border-t border-slate-200/50 gap-3">
+        <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto bg-white hover:bg-slate-50"><ArrowLeft className="w-4 h-4 mr-2" /> Atrás</Button>
+        <Button onClick={nextStep} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105">Siguiente <ArrowRight className="w-4 h-4 ml-2" /></Button>
       </div>
     </div>
   );

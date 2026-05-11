@@ -1,6 +1,17 @@
 const asyncHandler = require('express-async-handler');
 const { Client, Equipment } = require('../models');
 
+const validateUUID = (id) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const createNotFoundError = (resource) => {
+  const error = new Error(`${resource} no encontrado`);
+  error.statusCode = 404;
+  return error;
+};
+
 // ─── GET /api/clients ─────────────────────────────────────────────────────────
 const getClients = asyncHandler(async (req, res) => {
   const clients = await Client.findAll({
@@ -11,12 +22,18 @@ const getClients = asyncHandler(async (req, res) => {
 
 // ─── GET /api/clients/:id ─────────────────────────────────────────────────────
 const getClientById = asyncHandler(async (req, res) => {
-  const client = await Client.findByPk(req.params.id, {
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    throw createNotFoundError('Cliente');
+  }
+  
+  const client = await Client.findByPk(id, {
     include: [{ model: Equipment, as: 'equipment' }]
   });
 
   if (!client) {
-    return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
+    throw createNotFoundError('Cliente');
   }
   res.status(200).json({ success: true, data: client });
 });
@@ -35,9 +52,15 @@ const createClient = asyncHandler(async (req, res) => {
 
 // ─── PUT /api/clients/:id ─────────────────────────────────────────────────────
 const updateClient = asyncHandler(async (req, res) => {
-  const client = await Client.findByPk(req.params.id);
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    throw createNotFoundError('Cliente');
+  }
+  
+  const client = await Client.findByPk(id);
   if (!client) {
-    return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
+    throw createNotFoundError('Cliente');
   }
   await client.update(req.body);
   res.status(200).json({ success: true, data: client });
@@ -45,9 +68,15 @@ const updateClient = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/clients/:id ──────────────────────────────────────────────────
 const deleteClient = asyncHandler(async (req, res) => {
-  const client = await Client.findByPk(req.params.id);
+  const { id } = req.params;
+  
+  if (!validateUUID(id)) {
+    throw createNotFoundError('Cliente');
+  }
+  
+  const client = await Client.findByPk(id);
   if (!client) {
-    return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
+    throw createNotFoundError('Cliente');
   }
   await client.destroy();
   res.status(200).json({ success: true, message: 'Cliente eliminado exitosamente' });

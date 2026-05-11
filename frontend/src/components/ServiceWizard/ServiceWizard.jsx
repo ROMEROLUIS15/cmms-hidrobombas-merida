@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { WizardProvider, useWizard } from './WizardContext';
 import axios from 'axios';
+import { toast } from 'sonner';
+import { enqueueReport } from '../../hooks/useOfflineQueue';
+
+/** Generates a simple UUID v4 — same helper as useOfflineQueue */
+const uuidv4 = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 
 // Steps
 import Step0General from './steps/Step0General';
@@ -19,7 +28,7 @@ import Step12ObservacionesFirma from './steps/Step12ObservacionesFirma';
 
 import { CheckCircle2 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 const ServiceWizardContent = () => {
   const { currentStep, formData, clearOfflineDraft } = useWizard();
@@ -28,18 +37,49 @@ const ServiceWizardContent = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async () => {
+    // Guard: prevent double-submit if already in progress
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
     setErrorMsg('');
+    const token = localStorage.getItem('token');
+
+    // Generate ONE idempotency key for this submission attempt.
+    // It travels with the request (online) and with the queue entry (offline)
+    // so the backend and the queue can both detect duplicates.
+    const clientRequestId = uuidv4();
+    const reportPayload = { ...formData, _clientRequestId: clientRequestId };
+
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${BACKEND_URL}/api/service-reports`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.post(`${BACKEND_URL}/api/service-reports`, reportPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Idempotency-Key': clientRequestId,
+        }
       });
       setSuccess(true);
       await clearOfflineDraft();
     } catch (error) {
-      console.error(error);
-      setErrorMsg(error.response?.data?.message || 'Error al enviar el reporte. Verifica tu conexión.');
+      const isNetworkError =
+        !navigator.onLine ||
+        error.code === 'ERR_NETWORK' ||
+        error.code === 'ECONNABORTED' ||
+        (error.response?.status ?? 0) >= 500;
+
+      if (isNetworkError) {
+        try {
+          // enqueueReport is idempotent: passing _clientRequestId prevents
+          // double-enqueue if this block is reached more than once.
+          await enqueueReport(reportPayload, token);
+          setSuccess(true);
+          toast.success('Sin conexión. El reporte se sincronizará automáticamente al reconectar.');
+          await clearOfflineDraft();
+        } catch (queueError) {
+          setErrorMsg('Sin conexión y no se pudo guardar localmente. Intente de nuevo.');
+        }
+      } else {
+        setErrorMsg(error.response?.data?.message || 'Error al enviar el reporte.');
+      }
     } finally {
       setIsSubmitting(false);
     }

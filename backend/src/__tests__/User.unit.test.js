@@ -32,7 +32,7 @@ describe('User Model Unit Tests', () => {
 
     it('should have correct default value for isActive', () => {
       const isActiveAttr = User.rawAttributes.isActive;
-      expect(isActiveAttr.defaultValue).toBe(true);
+      expect(isActiveAttr.defaultValue).toBe(false);
     });
   });
 
