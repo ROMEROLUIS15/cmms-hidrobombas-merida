@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 echo "\n\033[1;36m🔍 Running lint-staged (ESLint --fix on staged files)...\033[0m\n"
 npx lint-staged
 
