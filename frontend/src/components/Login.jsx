@@ -476,10 +476,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                     className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 py-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5"
                   >
                     <Download className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-semibold text-sm">Descargar App</div>
-                      <div className="text-xs opacity-80 font-normal">Acceso directo para técnicos</div>
-                    </div>
+                    <span className="font-semibold text-sm">Descargar App</span>
                   </Button>
                 </div>
               </>
