@@ -1,8 +1,8 @@
-const globals = require('globals');
-const pluginJs = require('@eslint/js');
-const pluginReact = require('eslint-plugin-react');
+import globals from 'globals';
+import pluginJs from '@eslint/js';
+import pluginReact from 'eslint-plugin-react';
 
-module.exports = [
+export default [
   pluginJs.configs.recommended,
   pluginReact.configs.flat.recommended,
   {
@@ -26,8 +26,8 @@ module.exports = [
       },
     },
     rules: {
-      'react/react-in-jsx-scope': 'off', // Not needed in React 17+
-      'react/prop-types': 'off', // We will rely on JSDoc/Zod instead
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'eqeqeq': ['error', 'always'],
