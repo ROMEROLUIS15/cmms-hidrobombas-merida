@@ -10,6 +10,7 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.jest,
+        ...globals.node,
         process: 'readonly',
       },
       ecmaVersion: 2022,

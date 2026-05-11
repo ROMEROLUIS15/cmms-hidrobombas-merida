@@ -45,14 +45,14 @@ const Step10PresionesValvulas = () => {
                 <button 
                   type="button"
                   onClick={() => handleChange('safety_valve', true)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.safety_valve === true ? 'bg-green-100 text-green-700 shadow-inner ring-1 ring-green-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.safety_valve === true ? 'bg-green-500 text-white shadow-md ring-2 ring-green-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <Check className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleChange('safety_valve', false)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.safety_valve === false ? 'bg-red-100 text-red-700 shadow-inner ring-1 ring-red-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.safety_valve === false ? 'bg-red-500 text-white shadow-md ring-2 ring-red-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -67,14 +67,14 @@ const Step10PresionesValvulas = () => {
                 <button 
                   type="button"
                   onClick={() => handleChange('electrode_level', true)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.electrode_level === true ? 'bg-green-100 text-green-700 shadow-inner ring-1 ring-green-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.electrode_level === true ? 'bg-green-500 text-white shadow-md ring-2 ring-green-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <Check className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleChange('electrode_level', false)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.electrode_level === false ? 'bg-red-100 text-red-700 shadow-inner ring-1 ring-red-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.electrode_level === false ? 'bg-red-500 text-white shadow-md ring-2 ring-red-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -89,14 +89,14 @@ const Step10PresionesValvulas = () => {
                 <button 
                   type="button"
                   onClick={() => handleChange('valve_level', true)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.valve_level === true ? 'bg-green-100 text-green-700 shadow-inner ring-1 ring-green-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.valve_level === true ? 'bg-green-500 text-white shadow-md ring-2 ring-green-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <Check className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleChange('valve_level', false)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.valve_level === false ? 'bg-red-100 text-red-700 shadow-inner ring-1 ring-red-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.valve_level === false ? 'bg-red-500 text-white shadow-md ring-2 ring-red-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <X className="w-5 h-5" />
                 </button>

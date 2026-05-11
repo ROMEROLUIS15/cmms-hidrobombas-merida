@@ -58,6 +58,8 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
+    "lint": "eslint src --max-warnings=0",
+    "lint:fix": "eslint src --fix",
     "test": "vitest",
     "test:run": "vitest run",
     "preview": "vite preview"

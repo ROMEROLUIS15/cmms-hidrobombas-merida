@@ -1,0 +1,8 @@
+# Ensure shell scripts always use LF line endings (required for Git Bash on Windows)
+.husky/pre-commit  text eol=lf
+.husky/pre-push    text eol=lf
+.husky/_/*         text eol=lf
+*.sh               text eol=lf
+
+# Default behavior
+*                  text=auto

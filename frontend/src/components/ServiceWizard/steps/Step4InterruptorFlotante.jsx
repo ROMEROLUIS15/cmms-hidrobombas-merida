@@ -32,14 +32,14 @@ const Step4InterruptorFlotante = () => {
                 <button 
                   type="button"
                   onClick={() => handleChange('float_contact_na', true)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na === true ? 'bg-green-100 text-green-700 shadow-inner ring-1 ring-green-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na === true ? 'bg-green-500 text-white shadow-md ring-2 ring-green-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <Check className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleChange('float_contact_na', false)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na === false ? 'bg-red-100 text-red-700 shadow-inner ring-1 ring-red-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na === false ? 'bg-red-500 text-white shadow-md ring-2 ring-red-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -54,14 +54,14 @@ const Step4InterruptorFlotante = () => {
                 <button 
                   type="button"
                   onClick={() => handleChange('float_contact_na_2', true)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na_2 === true ? 'bg-green-100 text-green-700 shadow-inner ring-1 ring-green-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na_2 === true ? 'bg-green-500 text-white shadow-md ring-2 ring-green-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <Check className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleChange('float_contact_na_2', false)}
-                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na_2 === false ? 'bg-red-100 text-red-700 shadow-inner ring-1 ring-red-300' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
+                  className={`w-8 h-8 flex items-center justify-center rounded transition-all ${data.float_contact_na_2 === false ? 'bg-red-500 text-white shadow-md ring-2 ring-red-400' : 'bg-slate-50 text-slate-400 hover:bg-slate-200'}`}
                 >
                   <X className="w-5 h-5" />
                 </button>

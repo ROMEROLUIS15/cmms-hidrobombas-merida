@@ -17,6 +17,11 @@
     "lint-staged": "^17.0.4",
     "supertest": "^7.2.2"
   },
+  "lint-staged": {
+    "frontend/src/**/*.{js,jsx}": [
+      "eslint --fix --max-warnings=0"
+    ]
+  },
   "workspaces": [
     "frontend",
     "backend"
