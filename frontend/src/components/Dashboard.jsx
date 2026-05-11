@@ -245,7 +245,7 @@ const Dashboard = ({ user }) => {
             {recentReports.length > 0 ? (
               <div className="space-y-4">
                 {recentReports.map((report) => (
-                  <div className="flex items-start justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <div key={report.id} className="flex items-start justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                     <div className="flex-1 min-w-0 pr-2">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                         <span className="font-bold text-slate-900 text-sm">

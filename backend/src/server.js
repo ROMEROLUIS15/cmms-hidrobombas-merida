@@ -15,7 +15,7 @@ const startServer = async () => {
     } else {
       app.listen(PORT, '0.0.0.0', () => {
         if (process.env.NODE_ENV !== 'production') {
-          console.log(`🚀 Server ready [${process.env.NODE_ENV || 'development'}]`);
+          console.warn(`🚀 Server ready [${process.env.NODE_ENV || 'development'}]`);
         }
       });
     }
@@ -39,12 +39,12 @@ process.on('uncaughtException', (error) => {
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
+  console.warn('SIGTERM received. Shutting down gracefully...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
+  console.warn('SIGINT received. Shutting down gracefully...');
   process.exit(0);
 });
 

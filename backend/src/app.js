@@ -78,7 +78,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 404 handler for unknown routes
-app.use((req, res, next) => {
+app.use((req, res, _next) => {
   res.status(404).json({
     success: false,
     message: 'Endpoint not found',
