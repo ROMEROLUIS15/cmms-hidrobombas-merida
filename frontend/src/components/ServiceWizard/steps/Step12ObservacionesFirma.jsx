@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { useWizard } from '../WizardContext';
 import { Label } from '../../ui/label';
@@ -10,14 +10,47 @@ import { toast } from 'sonner';
 
 const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
   const { formData, updateFormData, prevStep } = useWizard();
-  const sigCanvas = useRef({});
+  const sigCanvas = useRef(null);
   const [sigCleared, setSigCleared] = useState(!formData.signature_base64);
+  const [canvasKey, setCanvasKey] = useState(0);
 
   // 0 = Observaciones, 1 = Firma
   const [subStep, setSubStep] = useState(0);
 
+  // Reconstruir canvas cuando cambia el subStep para evitar problemas de teclado
+  useEffect(() => {
+    if (subStep === 1) {
+      setCanvasKey(prev => prev + 1);
+    }
+  }, [subStep]);
+
+  // Prevenir que el botón back del hardware del móvil afecte la firma
+  // Usamos una variable de estado para evitar problemas con el ref en el closure
+  const [hasSignature, setHasSignature] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        // Solo prevenir si hay una firma activa y estamos en el paso de firma
+        if (subStep === 1 && hasSignature) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [subStep, hasSignature]);
+
+  // Actualizar el estado de la firma cuando cambie
+  useEffect(() => {
+    setHasSignature(!!formData.signature_base64 && !sigCleared);
+  }, [formData.signature_base64, sigCleared]);
+
   const clearSignature = () => {
-    if (sigCanvas.current) sigCanvas.current.clear();
+    if (sigCanvas.current) {
+      sigCanvas.current.clear();
+    }
     updateFormData(null, 'signature_base64', '');
     setSigCleared(true);
   };
@@ -27,6 +60,10 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
     const dataUrl = sigCanvas.current.getCanvas().toDataURL('image/png');
     updateFormData(null, 'signature_base64', dataUrl);
     setSigCleared(false);
+  };
+
+  const handleCanvasEnd = () => {
+    saveSignature();
   };
 
   const isReady =
@@ -106,45 +143,60 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
     <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
       <Header subtitle="Firma de Conformidad" />
 
-      {/* Nombre */}
-      <div className="space-y-2">
-        <Label className="text-slate-900 font-bold text-sm">Nombre de persona encargada *</Label>
-        <Input
-          placeholder="Nombre y Apellido"
-          value={formData.client_signature_name}
-          onChange={(e) => updateFormData(null, 'client_signature_name', e.target.value)}
-          className="bg-white/80 text-base"
-        />
-      </div>
-
-      {/* Canvas de firma */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-slate-900 font-bold text-sm">Firma *</Label>
-          {formData.signature_base64 && !sigCleared && (
-            <span className="text-emerald-600 text-sm flex items-center bg-emerald-50 px-3 py-1 rounded-full font-medium">
-              <CheckCircle2 className="w-4 h-4 mr-1" /> Firma capturada
-            </span>
-          )}
-        </div>
-
-        <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative touch-none shadow-inner">
-          <SignatureCanvas
-            ref={sigCanvas}
-            onEnd={saveSignature}
-            penColor="black"
-            canvasProps={{
-              className: 'w-full cursor-crosshair',
-              style: { height: '280px' },
-            }}
+{/* Nombre */}
+        <div className="space-y-2">
+          <Label className="text-slate-900 font-bold text-sm">Nombre de persona encargada *</Label>
+          <Input
+            placeholder="Nombre y Apellido"
+            value={formData.client_signature_name}
+            onChange={(e) => updateFormData(null, 'client_signature_name', e.target.value)}
+            className="bg-white/80 text-base"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="words"
+            spellCheck="false"
+            inputMode="text"
           />
-          {!formData.signature_base64 && sigCleared && (
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-2 text-slate-300">
-              <PenTool className="w-10 h-10" />
-              <span className="text-sm font-medium">Firme aquí con el dedo</span>
-            </div>
-          )}
         </div>
+
+{/* Canvas de firma */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-slate-900 font-bold text-sm">Firma *</Label>
+            {formData.signature_base64 && !sigCleared && (
+              <span className="text-emerald-600 text-sm flex items-center bg-emerald-50 px-3 py-1 rounded-full font-medium">
+                <CheckCircle2 className="w-4 h-4 mr-1" /> Firma capturada
+              </span>
+            )}
+          </div>
+
+          <div 
+            className="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative shadow-inner"
+            style={{ touchAction: 'none' }}
+            onTouchStart={(e) => e.preventDefault()}
+          >
+            <SignatureCanvas
+              key={canvasKey}
+              ref={sigCanvas}
+              penColor="black"
+              backgroundColor="rgba(255,255,255,1)"
+              canvasProps={{
+                className: 'w-full',
+                style: { 
+                  height: '280px',
+                  touchAction: 'none',
+                },
+                onTouchStart: (e) => e.preventDefault(),
+              }}
+              onEnd={handleCanvasEnd}
+            />
+            {(!formData.signature_base64 || sigCleared) && (
+              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-2 text-slate-300">
+                <PenTool className="w-10 h-10" />
+                <span className="text-sm font-medium">Firme aquí con el dedo</span>
+              </div>
+            )}
+          </div>
 
         <div className="flex justify-end">
           <Button
