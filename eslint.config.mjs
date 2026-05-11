@@ -7,15 +7,16 @@ export default [
   {
     ignores: [
       '**/node_modules/**',
-      '**/frontend/build/**',
-      '**/frontend/dist/**',
-      '**/backend/coverage/**',
+      '**/build/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/.husky/**',
+      '**/package-lock.json',
       '**/__tests__/**',
       '**/*.test.js',
       '**/*.test.jsx',
       '**/*.spec.js',
       '**/*.spec.jsx',
-      '**/package-lock.json',
     ],
   },
 
@@ -28,6 +29,7 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.jest,
+        ...globals.node,
         process: 'readonly',
       },
       ecmaVersion: 2022,
@@ -43,7 +45,7 @@ export default [
       ...pluginReact.configs.flat.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'eqeqeq': ['error', 'always'],
       'no-var': 'error',
@@ -65,11 +67,12 @@ export default [
       sourceType: 'commonjs',
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'eqeqeq': ['error', 'always'],
       'no-var': 'error',
       'prefer-const': 'error',
+      'curly': ['error', 'multi-line'],
     },
   },
 ];

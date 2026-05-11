@@ -4,7 +4,7 @@ require('dotenv').config();
 // Forzar la carga de pg para entornos serverless como Vercel
 try {
   require('pg');
-} catch (_e) {
+} catch {
   // Ignorar si falla localmente si no se usa Postgres
 }
 

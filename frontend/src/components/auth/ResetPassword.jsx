@@ -41,7 +41,7 @@ const ResetPassword = () => {
           setTokenValid(false);
           setError(response.data.message);
         }
-      } catch (error) {
+      } catch {
         setTokenValid(false);
         setError('Token inválido o expirado');
       }

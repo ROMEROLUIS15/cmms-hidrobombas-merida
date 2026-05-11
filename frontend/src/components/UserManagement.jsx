@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Users, 
-  UserCheck, 
-  UserX, 
   Shield, 
   Trash2, 
   Mail, 
@@ -35,47 +32,6 @@ const UserManagement = () => {
     }
   };
 
-  const toggleUserStatus = async (userId, currentStatus) => {
-    try {
-      await axios.put(`${BACKEND_URL}/api/users/${userId}/status`, 
-        { isActive: !currentStatus },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-      fetchUsers();
-      toast.success(currentStatus ? 'Usuario desactivado' : 'Usuario activado');
-    } catch (error) {
-      console.error('Error toggling status:', error.message);
-      toast.error('Error al cambiar estado del usuario');
-    }
-  };
-
-  const updateUserRole = async (userId, newRole) => {
-    try {
-      await axios.put(`${BACKEND_URL}/api/users/${userId}/role`, 
-        { role: newRole },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-      fetchUsers();
-      toast.success('Rol actualizado');
-    } catch (error) {
-      console.error('Error updating role:', error.message);
-      toast.error('Error al actualizar rol');
-    }
-  };
-
-  const deleteUser = async (userId) => {
-    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
-    try {
-      await axios.delete(`${BACKEND_URL}/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      fetchUsers();
-      toast.success('Usuario eliminado');
-    } catch (error) {
-      console.error('Error deleting user:', error.message);
-      toast.error('Error al eliminar usuario');
-    }
-  };
 
   useEffect(() => {
     fetchUsers();
@@ -89,7 +45,7 @@ const UserManagement = () => {
       );
       toast.success(currentStatus ? 'Acceso revocado' : 'Usuario aprobado con éxito');
       fetchUsers();
-    } catch (error) {
+    } catch {
       toast.error('Error al actualizar estado');
     }
   };
@@ -102,7 +58,7 @@ const UserManagement = () => {
       );
       toast.success('Rol actualizado');
       fetchUsers();
-    } catch (error) {
+    } catch {
       toast.error('Error al actualizar rol');
     }
   };
@@ -115,7 +71,7 @@ const UserManagement = () => {
         });
         toast.success('Usuario eliminado');
         fetchUsers();
-      } catch (error) {
+      } catch {
         toast.error('Error al eliminar usuario');
       }
     }

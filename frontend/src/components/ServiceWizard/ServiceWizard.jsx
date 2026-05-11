@@ -74,7 +74,7 @@ const ServiceWizardContent = () => {
           setSuccess(true);
           toast.success('Sin conexión. El reporte se sincronizará automáticamente al reconectar.');
           await clearOfflineDraft();
-        } catch (queueError) {
+        } catch {
           setErrorMsg('Sin conexión y no se pudo guardar localmente. Intente de nuevo.');
         }
       } else {

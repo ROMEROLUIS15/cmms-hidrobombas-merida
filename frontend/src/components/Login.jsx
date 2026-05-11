@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { Checkbox } from './ui/checkbox';
-import { Wrench, User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -95,7 +95,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
     try {
       // We'll check during registration attempt since there's no dedicated endpoint
       setEmailExists(false);
-    } catch (error) {
+    } catch {
       setEmailExists(false);
     } finally {
       setCheckingEmail(false);

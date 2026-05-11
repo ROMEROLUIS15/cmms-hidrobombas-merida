@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import {
-  ClipboardList, Search, Calendar, User, Building2,
+  ClipboardList, Search, Calendar, Building2,
   Settings, FileText, Filter, Eye, Download, Wrench
 } from 'lucide-react';
 import axios from 'axios';
@@ -73,7 +73,7 @@ const ServiceReports = ({ user }) => {
         controlData:     parse(raw.controlData),
       });
       setShowDetailsModal(true);
-    } catch (err) {
+    } catch {
       toast.error('Error al cargar los detalles del reporte');
     }
   };

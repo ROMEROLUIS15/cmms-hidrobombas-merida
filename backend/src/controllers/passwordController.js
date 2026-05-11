@@ -33,10 +33,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await PasswordResetToken.create({ token, expiresAt, userId: user.id });
 
-  const _resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password/${token}`;
-
-  // NOTE: In production, send the email via nodemailer/sendgrid using resetUrl.
+  // NOTE: In production, send the email via nodemailer/sendgrid using the reset URL.
   // In development, check your email service or use a mail trap.
+  // URL: `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password/${token}`
 
   res.status(200).json({
     success: true,

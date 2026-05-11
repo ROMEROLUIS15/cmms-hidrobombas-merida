@@ -18,9 +18,6 @@ import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/sonner';
 import OfflineBanner from './components/OfflineBanner';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
-const API = `${BACKEND_URL}/api`;
-
 // Axios interceptor for authentication
 axios.interceptors.request.use(
   (config) => {
