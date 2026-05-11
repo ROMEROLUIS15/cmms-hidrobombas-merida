@@ -202,7 +202,7 @@ const WizardSuccessScreen = ({ reportId, clientEmail }) => {
           <Button
             variant="outline"
             onClick={handleExit}
-            className="w-full h-11 gap-3 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 text-sm rounded-xl transition-all"
+            className="w-full h-11 gap-3 border-rose-200 text-rose-600 hover:text-rose-700 hover:bg-rose-50 hover:border-rose-300 text-sm rounded-xl transition-all"
           >
             <LogOut className="w-4 h-4" />
             Salir sin enviar

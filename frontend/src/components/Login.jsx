@@ -6,9 +6,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { Checkbox } from './ui/checkbox';
-import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
@@ -18,6 +19,7 @@ const API = `${BACKEND_URL}/api`;
 const Login = ({ onLogin, isRegisterMode = false }) => {
   const [isLogin, setIsLogin] = useState(!isRegisterMode);
   const [loading, setLoading] = useState(false);
+  const { isInstallable, installPWA } = usePWAInstall();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -454,6 +456,34 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                 }
               </button>
             </div>
+
+            {/* PWA Install Button */}
+            {isInstallable && (
+              <>
+                <div className="relative mt-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-slate-400">Instalación rápida</span>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <Button
+                    type="button"
+                    onClick={installPWA}
+                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 py-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                  >
+                    <Download className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-semibold text-sm">Descargar App</div>
+                      <div className="text-xs opacity-80 font-normal">Acceso directo para técnicos</div>
+                    </div>
+                  </Button>
+                </div>
+              </>
+            )}
             
 
           </CardContent>
