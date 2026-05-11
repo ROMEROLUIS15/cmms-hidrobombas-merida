@@ -369,7 +369,7 @@ const ClientList = ({ user }) => {
                 No se encontraron clientes
               </h3>
               <p className="text-slate-600 mb-4">
-                No hay clientes que coincidan con "{searchTerm}"
+                No hay clientes que coincidan con &quot;{searchTerm}&quot;
               </p>
               <Button 
                 variant="outline" 

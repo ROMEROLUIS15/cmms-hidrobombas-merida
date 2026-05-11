@@ -480,7 +480,7 @@ const EquipmentList = ({ user }) => {
                 No se encontraron equipos
               </h3>
               <p className="text-slate-600 mb-4">
-                No hay equipos que coincidan con "{searchTerm}"
+                No hay equipos que coincidan con &quot;{searchTerm}&quot;
               </p>
               <Button 
                 variant="outline" 
