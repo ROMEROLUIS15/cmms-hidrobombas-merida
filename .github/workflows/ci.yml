@@ -70,9 +70,12 @@ jobs:
 
       - name: Inject Dummy Env Vars (Sandbox Mode)
         run: |
-          echo "JWT_SECRET=dummy_secret_2025" >> $GITHUB_ENV
+          echo "JWT_SECRET=dummy_secret_ci_only" >> $GITHUB_ENV
           echo "NODE_ENV=test" >> $GITHUB_ENV
           echo "DB_STORAGE=./database.sqlite" >> $GITHUB_ENV
+          echo "BCRYPT_ROUNDS=1" >> $GITHUB_ENV
+          echo "JWT_EXPIRES_IN=1h" >> $GITHUB_ENV
+          echo "FRONTEND_URL=http://localhost:5000" >> $GITHUB_ENV
 
       - name: Run Jest (Backend)
         run: npm run test -w backend
