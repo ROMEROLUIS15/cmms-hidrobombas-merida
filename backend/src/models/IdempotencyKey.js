@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('./index');
+const { sequelize } = require('../config/database');
 
 const IdempotencyKey = sequelize.define('IdempotencyKey', {
   id: {

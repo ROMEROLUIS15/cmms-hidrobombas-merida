@@ -6,6 +6,7 @@ const PasswordResetToken = require('./PasswordResetToken');
 const AdminTechnician = require('./AdminTechnician');
 const TechnicianClient = require('./TechnicianClient');
 const TechnicianEquipment = require('./TechnicianEquipment');
+const IdempotencyKey = require('./IdempotencyKey');
 
 // Define associations
 
@@ -51,5 +52,6 @@ module.exports = {
   PasswordResetToken,
   AdminTechnician,
   TechnicianClient,
-  TechnicianEquipment
+  TechnicianEquipment,
+  IdempotencyKey
 };
