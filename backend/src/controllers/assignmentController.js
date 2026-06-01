@@ -22,7 +22,7 @@ const AdminTechnicianController = {
     const { adminId } = req.params;
     
     if (!validateUUID(adminId)) {
-      return res.status(400).json({ message: 'ID de administrador inválido' });
+      return res.status(400).json({ success: false, message: 'ID de administrador inválido' });
     }
 
     const assignments = await AdminTechnician.findAll({
@@ -32,14 +32,14 @@ const AdminTechnicianController = {
       ]
     });
 
-    res.json(assignments.map(a => a.technician));
+    res.json({ success: true, data: assignments.map(a => a.technician) });
   }),
 
   getAdminsByTechnician: asyncHandler(async (req, res, _next) => {
     const { technicianId } = req.params;
     
     if (!validateUUID(technicianId)) {
-      return res.status(400).json({ message: 'ID de técnico inválido' });
+      return res.status(400).json({ success: false, message: 'ID de técnico inválido' });
     }
 
     const assignments = await AdminTechnician.findAll({
@@ -49,33 +49,33 @@ const AdminTechnicianController = {
       ]
     });
 
-    res.json(assignments.map(a => a.admin));
+    res.json({ success: true, data: assignments.map(a => a.admin) });
   }),
 
   assignTechnician: asyncHandler(async (req, res, _next) => {
     const { adminId, technicianId } = req.body;
 
     if (!adminId || !technicianId) {
-      return res.status(400).json({ message: 'adminId y technicianId son requeridos' });
+      return res.status(400).json({ success: false, message: 'adminId y technicianId son requeridos' });
     }
 
     if (!validateUUID(adminId) || !validateUUID(technicianId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const admin = await User.findByPk(adminId);
     if (!admin || !validateRole(admin, ['admin', 'supervisor'])) {
-      return res.status(404).json({ message: 'Administrador no encontrado o rol inválido' });
+      return res.status(404).json({ success: false, message: 'Administrador no encontrado o rol inválido' });
     }
 
     const technician = await User.findByPk(technicianId);
     if (!technician || technician.role !== 'technician') {
-      return res.status(404).json({ message: 'Técnico no encontrado o rol inválido' });
+      return res.status(404).json({ success: false, message: 'Técnico no encontrado o rol inválido' });
     }
 
     const existing = await AdminTechnician.findOne({ where: { adminId, technicianId } });
     if (existing) {
-      return res.status(400).json({ message: 'El técnico ya está asignado a este administrador' });
+      return res.status(400).json({ success: false, message: 'El técnico ya está asignado a este administrador' });
     }
 
     const assignment = await AdminTechnician.create({ adminId, technicianId });
@@ -86,23 +86,23 @@ const AdminTechnicianController = {
       ]
     });
 
-    res.status(201).json(assignmentWithDetails);
+    res.status(201).json({ success: true, data: assignmentWithDetails });
   }),
 
   removeTechnician: asyncHandler(async (req, res, _next) => {
     const { adminId, technicianId } = req.params;
 
     if (!validateUUID(adminId) || !validateUUID(technicianId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const deleted = await AdminTechnician.destroy({ where: { adminId, technicianId } });
     
     if (!deleted) {
-      return res.status(404).json({ message: 'Asignación no encontrada' });
+      return res.status(404).json({ success: false, message: 'Asignación no encontrada' });
     }
 
-    res.json({ message: 'Técnico desasignado del administrador' });
+    res.json({ success: true, message: 'Técnico desasignado del administrador' });
   })
 };
 
@@ -111,7 +111,7 @@ const TechnicianClientController = {
     const { technicianId } = req.params;
     
     if (!validateUUID(technicianId)) {
-      return res.status(400).json({ message: 'ID de técnico inválido' });
+      return res.status(400).json({ success: false, message: 'ID de técnico inválido' });
     }
 
     const assignments = await TechnicianClient.findAll({
@@ -121,14 +121,14 @@ const TechnicianClientController = {
       ]
     });
 
-    res.json(assignments.map(a => a.client));
+    res.json({ success: true, data: assignments.map(a => a.client) });
   }),
 
   getTechniciansByClient: asyncHandler(async (req, res, _next) => {
     const { clientId } = req.params;
     
     if (!validateUUID(clientId)) {
-      return res.status(400).json({ message: 'ID de cliente inválido' });
+      return res.status(400).json({ success: false, message: 'ID de cliente inválido' });
     }
 
     const assignments = await TechnicianClient.findAll({
@@ -138,33 +138,33 @@ const TechnicianClientController = {
       ]
     });
 
-    res.json(assignments.map(a => a.technician));
+    res.json({ success: true, data: assignments.map(a => a.technician) });
   }),
 
   assignClient: asyncHandler(async (req, res, _next) => {
     const { technicianId, clientId } = req.body;
 
     if (!technicianId || !clientId) {
-      return res.status(400).json({ message: 'technicianId y clientId son requeridos' });
+      return res.status(400).json({ success: false, message: 'technicianId y clientId son requeridos' });
     }
 
     if (!validateUUID(technicianId) || !validateUUID(clientId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const technician = await User.findByPk(technicianId);
     if (!technician || technician.role !== 'technician') {
-      return res.status(404).json({ message: 'Técnico no encontrado o rol inválido' });
+      return res.status(404).json({ success: false, message: 'Técnico no encontrado o rol inválido' });
     }
 
     const client = await Client.findByPk(clientId);
     if (!client) {
-      return res.status(404).json({ message: 'Cliente no encontrado' });
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
 
     const existing = await TechnicianClient.findOne({ where: { technicianId, clientId } });
     if (existing) {
-      return res.status(400).json({ message: 'El cliente ya está asignado a este técnico' });
+      return res.status(400).json({ success: false, message: 'El cliente ya está asignado a este técnico' });
     }
 
     const assignment = await TechnicianClient.create({ technicianId, clientId });
@@ -175,23 +175,23 @@ const TechnicianClientController = {
       ]
     });
 
-    res.status(201).json(assignmentWithDetails);
+    res.status(201).json({ success: true, data: assignmentWithDetails });
   }),
 
   removeClient: asyncHandler(async (req, res, _next) => {
     const { technicianId, clientId } = req.params;
 
     if (!validateUUID(technicianId) || !validateUUID(clientId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const deleted = await TechnicianClient.destroy({ where: { technicianId, clientId } });
     
     if (!deleted) {
-      return res.status(404).json({ message: 'Asignación no encontrada' });
+      return res.status(404).json({ success: false, message: 'Asignación no encontrada' });
     }
 
-    res.json({ message: 'Cliente desasignado del técnico' });
+    res.json({ success: true, message: 'Cliente desasignado del técnico' });
   }),
 
   getAllAssignments: asyncHandler(async (req, res, _next) => {
@@ -202,7 +202,7 @@ const TechnicianClientController = {
       ]
     });
 
-    res.json(assignments);
+    res.json({ success: true, data: assignments });
   })
 };
 
@@ -211,7 +211,7 @@ const TechnicianEquipmentController = {
     const { technicianId } = req.params;
     
     if (!validateUUID(technicianId)) {
-      return res.status(400).json({ message: 'ID de técnico inválido' });
+      return res.status(400).json({ success: false, message: 'ID de técnico inválido' });
     }
 
     const assignments = await TechnicianEquipment.findAll({
@@ -226,14 +226,14 @@ const TechnicianEquipmentController = {
       ]
     });
 
-    res.json(assignments.map(a => a.equipment));
+    res.json({ success: true, data: assignments.map(a => a.equipment) });
   }),
 
   getTechniciansByEquipment: asyncHandler(async (req, res, _next) => {
     const { equipmentId } = req.params;
     
     if (!validateUUID(equipmentId)) {
-      return res.status(400).json({ message: 'ID de equipo inválido' });
+      return res.status(400).json({ success: false, message: 'ID de equipo inválido' });
     }
 
     const assignments = await TechnicianEquipment.findAll({
@@ -243,33 +243,33 @@ const TechnicianEquipmentController = {
       ]
     });
 
-    res.json(assignments.map(a => a.technician));
+    res.json({ success: true, data: assignments.map(a => a.technician) });
   }),
 
   assignEquipment: asyncHandler(async (req, res, _next) => {
     const { technicianId, equipmentId } = req.body;
 
     if (!technicianId || !equipmentId) {
-      return res.status(400).json({ message: 'technicianId y equipmentId son requeridos' });
+      return res.status(400).json({ success: false, message: 'technicianId y equipmentId son requeridos' });
     }
 
     if (!validateUUID(technicianId) || !validateUUID(equipmentId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const technician = await User.findByPk(technicianId);
     if (!technician || technician.role !== 'technician') {
-      return res.status(404).json({ message: 'Técnico no encontrado o rol inválido' });
+      return res.status(404).json({ success: false, message: 'Técnico no encontrado o rol inválido' });
     }
 
     const equipment = await Equipment.findByPk(equipmentId);
     if (!equipment) {
-      return res.status(404).json({ message: 'Equipo no encontrado' });
+      return res.status(404).json({ success: false, message: 'Equipo no encontrado' });
     }
 
     const existing = await TechnicianEquipment.findOne({ where: { technicianId, equipmentId } });
     if (existing) {
-      return res.status(400).json({ message: 'El equipo ya está asignado a este técnico' });
+      return res.status(400).json({ success: false, message: 'El equipo ya está asignado a este técnico' });
     }
 
     const assignment = await TechnicianEquipment.create({ technicianId, equipmentId });
@@ -280,23 +280,23 @@ const TechnicianEquipmentController = {
       ]
     });
 
-    res.status(201).json(assignmentWithDetails);
+    res.status(201).json({ success: true, data: assignmentWithDetails });
   }),
 
   removeEquipment: asyncHandler(async (req, res, _next) => {
     const { technicianId, equipmentId } = req.params;
 
     if (!validateUUID(technicianId) || !validateUUID(equipmentId)) {
-      return res.status(400).json({ message: 'IDs inválidos' });
+      return res.status(400).json({ success: false, message: 'IDs inválidos' });
     }
 
     const deleted = await TechnicianEquipment.destroy({ where: { technicianId, equipmentId } });
     
     if (!deleted) {
-      return res.status(404).json({ message: 'Asignación no encontrada' });
+      return res.status(404).json({ success: false, message: 'Asignación no encontrada' });
     }
 
-    res.json({ message: 'Equipo desasignado del técnico' });
+    res.json({ success: true, message: 'Equipo desasignado del técnico' });
   }),
 
   getAllAssignments: asyncHandler(async (req, res, _next) => {
@@ -307,7 +307,7 @@ const TechnicianEquipmentController = {
       ]
     });
 
-    res.json(assignments);
+    res.json({ success: true, data: assignments });
   })
 };
 
@@ -316,3 +316,4 @@ module.exports = {
   TechnicianClientController,
   TechnicianEquipmentController
 };
+

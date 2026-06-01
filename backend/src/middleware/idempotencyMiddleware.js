@@ -24,9 +24,13 @@ const idempotencyMiddleware = asyncHandler(async (req, res, next) => {
 
   if (existingKey) {
     console.warn(`[Idempotency] Duplicate request blocked: ${idempotencyKey}`);
-    return res.status(existingKey.responseStatus).json(
-      JSON.parse(existingKey.responseBody)
-    );
+    let cachedBody;
+    try {
+      cachedBody = JSON.parse(existingKey.responseBody);
+    } catch {
+      return res.status(500).json({ success: false, message: 'Idempotency cache corrupted' });
+    }
+    return res.status(existingKey.responseStatus).json(cachedBody);
   }
 
   const originalJson = res.json.bind(res);

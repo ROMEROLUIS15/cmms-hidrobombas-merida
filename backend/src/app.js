@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { errorHandler } = require('./middleware/errorHandler');
@@ -14,6 +15,8 @@ const serviceReportRoutes = require('./routes/serviceReportRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const userRoutes = require('./routes/userRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const aiRoutes = require('./routes/aiRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
 
@@ -66,24 +69,47 @@ app.get('/', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/service-reports', serviceReportRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/assignments', assignmentRoutes);
+// ── Rate Limiting ──────────────────────────────────────────────────────
+// skip() desactiva el límite en tests para que los integration tests no sean bloqueados
+const isTestEnv = () => process.env.NODE_ENV === 'test';
 
-// General health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    database: process.env.DATABASE_URL ? 'postgresql-neon' : 'sqlite-sequelize',
-  });
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 15, // máximo 15 intentos por ventana
+  skip: isTestEnv,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiados intentos de autenticación. Intenta de nuevo en 15 minutos.'
+  }
 });
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  skip: isTestEnv,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiadas peticiones. Intenta de nuevo más tarde.'
+  }
+});
+
+// API routes
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/dashboard', apiLimiter, dashboardRoutes);
+app.use('/api/equipment', apiLimiter, equipmentRoutes);
+app.use('/api/service-reports', apiLimiter, serviceReportRoutes);
+app.use('/api/clients', apiLimiter, clientRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
+app.use('/api/assignments', apiLimiter, assignmentRoutes);
+app.use('/api/ai', apiLimiter, aiRoutes);
+
+// Health check routes (public, no auth required)
+app.use('/api/health', healthRoutes);
+app.use('/health', healthRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res, _next) => {

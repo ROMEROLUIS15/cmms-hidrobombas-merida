@@ -127,7 +127,7 @@ const createServiceReport = asyncHandler(async (req, res) => {
     recommendations: recommendations || null,
     cost: cost || 0,
     equipmentId: equipment_id,
-    userId: req.user?.id || null
+    userId: req.user?.userId || req.user?.id || null
   });
 
   const full = await ServiceReport.findByPk(report.id, {

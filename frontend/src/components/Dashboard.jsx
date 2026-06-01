@@ -96,7 +96,6 @@ const Dashboard = ({ user }) => {
         value: stats?.total_clients || 0,
         icon: Building2,
         color: 'from-primary to-secondary',
-        change: '+12%',
         testId: 'total-clients-stat'
       },
       {
@@ -104,7 +103,6 @@ const Dashboard = ({ user }) => {
         value: stats?.total_equipment || 0,
         icon: Settings,
         color: 'from-secondary to-primary',
-        change: '+8%',
         testId: 'total-equipment-stat'
       },
       {
@@ -112,7 +110,6 @@ const Dashboard = ({ user }) => {
         value: stats?.total_reports || 0,
         icon: CheckCircle,
         color: 'from-purple-500 to-violet-600',
-        change: '+15%',
         testId: 'total-reports-stat'
       },
       {
@@ -120,7 +117,6 @@ const Dashboard = ({ user }) => {
         value: stats?.total_technicians || 0,
         icon: Users,
         color: 'from-orange-500 to-amber-600',
-        change: '+2%',
         testId: 'total-technicians-stat'
       }
     ];
@@ -213,9 +209,7 @@ const Dashboard = ({ user }) => {
                     <p className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">
                       {stat.value}
                     </p>
-                    <p className="text-xs sm:text-sm text-green-600 font-medium mt-1 truncate">
-                      {stat.change} vs mes anterior
-                    </p>
+
                   </div>
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg shadow-primary/20`}>
                     <Icon className="w-6 h-6 text-white" />

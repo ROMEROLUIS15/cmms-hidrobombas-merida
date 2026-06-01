@@ -43,11 +43,12 @@ describe('User Routes Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(3);
-      expect(response.body[0]).not.toHaveProperty('password');
-      expect(response.body[0]).toHaveProperty('username');
-      expect(response.body[0]).toHaveProperty('email');
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBe(3);
+      expect(response.body.data[0]).not.toHaveProperty('password');
+      expect(response.body.data[0]).toHaveProperty('username');
+      expect(response.body.data[0]).toHaveProperty('email');
     });
 
     it('should return 401 without authorization token', async () => {
@@ -76,7 +77,7 @@ describe('User Routes Integration Tests', () => {
         .send({ isActive: true })
         .expect(200);
 
-      expect(response.body.isActive).toBe(true);
+      expect(response.body.data.isActive).toBe(true);
     });
 
     it('should deactivate an active user', async () => {
@@ -95,7 +96,7 @@ describe('User Routes Integration Tests', () => {
         .send({ isActive: false })
         .expect(200);
 
-      expect(response.body.isActive).toBe(false);
+      expect(response.body.data.isActive).toBe(false);
     });
 
     it('should return 404 for non-existent user', async () => {
@@ -126,7 +127,7 @@ describe('User Routes Integration Tests', () => {
         .send({ role: 'admin' })
         .expect(200);
 
-      expect(response.body.role).toBe('admin');
+      expect(response.body.data.role).toBe('admin');
     });
 
     it('should update user role from admin to user', async () => {
@@ -145,7 +146,7 @@ describe('User Routes Integration Tests', () => {
         .send({ role: 'user' })
         .expect(200);
 
-      expect(response.body.role).toBe('user');
+      expect(response.body.data.role).toBe('user');
     });
 
     it('should return 404 for non-existent user', async () => {
