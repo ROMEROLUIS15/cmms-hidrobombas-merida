@@ -1,13 +1,23 @@
 const asyncHandler = require('express-async-handler');
+const { Client, Equipment, ServiceReport, User } = require('../models');
 
 const getStats = asyncHandler(async (req, res) => {
-  // Mock data for the dashboard stats
+  const [total_clients, total_equipment, total_reports, total_technicians] = await Promise.all([
+    Client.count(),
+    Equipment.count(),
+    ServiceReport.count(),
+    User.count({ where: { role: 'technician', isActive: true } })
+  ]);
+
   res.status(200).json({
-    total_clients: 42,
-    total_equipment: 156,
-    total_reports: 89,
-    total_technicians: 12,
-    pending_maintenance: 5
+    success: true,
+    data: {
+      total_clients,
+      total_equipment,
+      total_reports,
+      total_technicians,
+      pending_maintenance: 0
+    }
   });
 });
 

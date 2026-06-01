@@ -62,16 +62,23 @@ const createClient = asyncHandler(async (req, res) => {
 // ─── PUT /api/clients/:id ─────────────────────────────────────────────────────
 const updateClient = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  
+
   if (!validateUUID(id)) {
-    throw createNotFoundError('Cliente');
+    const error = new Error('ID de cliente inválido');
+    error.statusCode = 400;
+    throw error;
   }
-  
+
   const client = await Client.findByPk(id);
   if (!client) {
     throw createNotFoundError('Cliente');
   }
-  await client.update(req.body);
+  const allowedFields = ['name', 'email', 'phone', 'address', 'contactPerson', 'rif'];
+  const filtered = allowedFields.reduce((obj, key) => {
+    if (req.body[key] !== undefined) obj[key] = req.body[key];
+    return obj;
+  }, {});
+  await client.update(filtered);
   res.status(200).json({ success: true, data: client });
 });
 

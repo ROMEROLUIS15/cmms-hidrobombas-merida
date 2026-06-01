@@ -10,11 +10,21 @@ const refreshCookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
+/**
+ * Clear both auth cookies (token + refreshToken)
+ * @param {import('express').Response} res
+ */
 const clearAuthCookies = (res) => {
-  res.clearCookie('token', { path: '/' });
-  res.clearCookie('refreshToken', { path: '/' });
+  res.clearCookie('token', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
 };
 
+/**
+ * Set auth cookies (token + optional refreshToken)
+ * @param {import('express').Response} res
+ * @param {string} token - JWT access token
+ * @param {string|null} [refreshToken] - JWT refresh token
+ */
 const setAuthCookies = (res, token, refreshToken = null) => {
   res.cookie('token', token, {
     ...cookieOptions,

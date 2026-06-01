@@ -6,12 +6,12 @@ const validateUUID = (id) => {
   return uuidRegex.test(id);
 };
 
-const getUserById = asyncHandler(async (id) => {
+const getUserById = async (id) => {
   if (!validateUUID(id)) {
     return null;
   }
   return await User.findByPk(id);
-});
+};
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -21,7 +21,7 @@ const getUsers = asyncHandler(async (req, res) => {
     attributes: { exclude: ['password'] },
     order: [['createdAt', 'DESC']]
   });
-  res.json(users);
+  res.json({ success: true, data: users });
 });
 
 // @desc    Update user status (Activate/Deactivate)
@@ -33,7 +33,8 @@ const updateUserStatus = asyncHandler(async (req, res) => {
   if (user) {
     user.isActive = req.body.isActive !== undefined ? req.body.isActive : user.isActive;
     const updatedUser = await user.save();
-    res.json(updatedUser);
+    const { password: _password, ...safeUser } = updatedUser.toJSON();
+    res.json({ success: true, data: safeUser });
   } else {
     const error = new Error('Usuario no encontrado');
     error.statusCode = 404;
@@ -45,12 +46,22 @@ const updateUserStatus = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/:id/role
 // @access  Private/Admin
 const updateUserRole = asyncHandler(async (req, res) => {
-  const user = await getUserById(req.params.id);
+  const { id } = req.params;
+
+  if (req.user.userId === id || req.user.id === id) {
+    return res.status(400).json({
+      success: false,
+      message: 'No puedes cambiar tu propio rol'
+    });
+  }
+
+  const user = await getUserById(id);
 
   if (user) {
     user.role = req.body.role || user.role;
     const updatedUser = await user.save();
-    res.json(updatedUser);
+    const { password: _password, ...safeUser } = updatedUser.toJSON();
+    res.json({ success: true, data: safeUser });
   } else {
     const error = new Error('Usuario no encontrado');
     error.statusCode = 404;
@@ -62,11 +73,20 @@ const updateUserRole = asyncHandler(async (req, res) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
-  const user = await getUserById(req.params.id);
+  const { id } = req.params;
+
+  if (req.user.userId === id || req.user.id === id) {
+    return res.status(400).json({
+      success: false,
+      message: 'No puedes eliminar tu propia cuenta'
+    });
+  }
+
+  const user = await getUserById(id);
 
   if (user) {
     await user.destroy();
-    res.json({ message: 'Usuario eliminado' });
+    res.json({ success: true, message: 'Usuario eliminado' });
   } else {
     const error = new Error('Usuario no encontrado');
     error.statusCode = 404;

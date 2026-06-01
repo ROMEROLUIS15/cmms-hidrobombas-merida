@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const { Op } = require('sequelize');
 const asyncHandler = require('express-async-handler');
-const { generateToken, generateRefreshToken } = require('../utils/jwt');
+const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { setAuthCookies, clearAuthCookies } = require('../utils/cookie');
 
 /**
@@ -19,7 +19,7 @@ const { setAuthCookies, clearAuthCookies } = require('../utils/cookie');
  */
 const register = asyncHandler(async (req, res) => {
     // Accept both camelCase (fullName) and snake_case (full_name) from different clients
-    const { fullName, full_name, email, password, role } = req.body;
+    const { fullName, full_name, email, password, role: _role } = req.body;
     const username = fullName || full_name;
 
     // Check if user already exists
@@ -41,12 +41,13 @@ const register = asyncHandler(async (req, res) => {
       });
     }
 
-    // Create new user
+    // Create new user — role is always 'technician' on self-registration.
+    // Admins can promote users via PUT /api/users/:id/role.
     const newUser = await User.create({
       username,
       email: email.toLowerCase(),
       password,
-      role: role || 'technician'
+      role: 'technician'
     });
 
 
@@ -163,8 +164,7 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 
   try {
-    const jwt = require('../utils/jwt');
-    const decoded = jwt.verifyRefreshToken(refreshTokenValue);
+    const decoded = verifyRefreshToken(refreshTokenValue);
 
     const user = await User.findByPk(decoded.userId);
 

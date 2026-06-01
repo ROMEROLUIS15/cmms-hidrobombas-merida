@@ -14,8 +14,6 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
-// Logo import removed
-
 const Login = ({ onLogin, isRegisterMode = false }) => {
   const [isLogin, setIsLogin] = useState(!isRegisterMode);
   const [loading, setLoading] = useState(false);
@@ -24,20 +22,18 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
     email: '',
     password: '',
     full_name: '',
-    role: 'technician',
     confirm_password: '',
     remember_me: false
   });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Real-time validation states
-  const [emailExists, setEmailExists] = useState(false);
   const [emailValid, setEmailValid] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,21 +85,6 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
     return emailRegex.test(email);
   };
 
-  // Check if email exists (for registration)
-  const checkEmailExists = async (email) => {
-    if (!validateEmail(email) || isLogin) return;
-    
-    setCheckingEmail(true);
-    try {
-      // We'll check during registration attempt since there's no dedicated endpoint
-      setEmailExists(false);
-    } catch {
-      setEmailExists(false);
-    } finally {
-      setCheckingEmail(false);
-    }
-  };
-
   // Password strength calculation
   const calculatePasswordStrength = (password) => {
     let score = 0;
@@ -127,9 +108,6 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
     // Real-time validation
     if (name === 'email') {
       setEmailValid(validateEmail(value));
-      if (validateEmail(value) && !isLogin) {
-        setTimeout(() => checkEmailExists(value), 500); // Debounce
-      }
     }
     
     if (name === 'password') {
@@ -227,9 +205,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                   {/* Email validation indicator */}
                   {formData.email && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      {checkingEmail ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                      ) : emailValid ? (
+                      {emailValid ? (
                         <CheckCircle className="w-4 h-4 text-green-500" />
                       ) : (
                         <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -240,9 +216,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                 {formData.email && !emailValid && (
                   <p className="text-xs text-red-500 mt-1">Ingresa un email válido</p>
                 )}
-                {!isLogin && emailExists && (
-                  <p className="text-xs text-red-500 mt-1">Este email ya está registrado</p>
-                )}
+
               </div>
               
               <div className="space-y-2">
@@ -369,25 +343,8 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
                 </div>
               )}
               
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="text-slate-700 font-medium">
-                    Rol
-                  </Label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
-                    data-testid="role-select"
-                  >
-                    <option value="technician">Técnico</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-              )}
+
+
               
               {isLogin && (
                 <div className="flex items-center space-x-2">

@@ -34,7 +34,6 @@ describe('Password Controller Unit Tests', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
-        email_sent: false,
         message: expect.stringContaining('Si ese email está registrado')
       }));
     });
@@ -55,8 +54,7 @@ describe('Password Controller Unit Tests', () => {
       }));
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        success: true,
-        email_sent: true
+        success: true
       }));
     });
   });

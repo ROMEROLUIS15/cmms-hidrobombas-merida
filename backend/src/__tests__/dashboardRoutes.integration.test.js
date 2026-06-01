@@ -34,11 +34,12 @@ describe('Dashboard Routes Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('total_clients');
-      expect(response.body).toHaveProperty('total_equipment');
-      expect(response.body).toHaveProperty('total_reports');
-      expect(response.body).toHaveProperty('total_technicians');
-      expect(response.body).toHaveProperty('pending_maintenance');
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('total_clients');
+      expect(response.body.data).toHaveProperty('total_equipment');
+      expect(response.body.data).toHaveProperty('total_reports');
+      expect(response.body.data).toHaveProperty('total_technicians');
+      expect(response.body.data).toHaveProperty('pending_maintenance');
     });
 
     it('should return 401 without authorization', async () => {

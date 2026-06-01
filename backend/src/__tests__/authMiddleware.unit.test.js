@@ -57,7 +57,7 @@ describe('Auth Middleware Unit Tests', () => {
       expect(User.findOne).toHaveBeenCalledWith({
         where: { id: 1, isActive: true }
       });
-      expect(req.user).toEqual({ userId: 1, email: 'test@test.com', role: 'admin' });
+      expect(req.user).toEqual({ id: 1, userId: 1, email: 'test@test.com', role: 'admin' });
       expect(next).toHaveBeenCalledTimes(1);
     });
 

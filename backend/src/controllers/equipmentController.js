@@ -86,7 +86,12 @@ const updateEquipment = asyncHandler(async (req, res) => {
     error.statusCode = 404;
     throw error;
   }
-  await eq.update(req.body);
+  const allowedFields = ['name', 'type', 'model', 'serialNumber', 'location', 'clientId', 'status', 'notes', 'brand'];
+  const filtered = allowedFields.reduce((obj, key) => {
+    if (req.body[key] !== undefined) obj[key] = req.body[key];
+    return obj;
+  }, {});
+  await eq.update(filtered);
   res.status(200).json({ success: true, data: eq });
 });
 

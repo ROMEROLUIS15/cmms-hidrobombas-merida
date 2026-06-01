@@ -20,7 +20,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
   if (!user) {
     return res.status(200).json({
       success: true,
-      email_sent: false,
       message: 'Si ese email está registrado, recibirás un enlace de recuperación.'
     });
   }
@@ -39,7 +38,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    email_sent: true,
     message: 'Si ese email está registrado, recibirás un enlace de recuperación.'
   });
 });

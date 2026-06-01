@@ -17,6 +17,7 @@ import UserManagement from './components/UserManagement';
 import Navigation from './components/Navigation';
 import { Toaster } from './components/ui/sonner';
 import OfflineBanner from './components/OfflineBanner';
+import { AIChatBubble } from './components/AIAssistant';
 
 // Axios interceptor for authentication
 axios.interceptors.request.use(
@@ -93,10 +94,10 @@ function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <BrowserRouter>
-        <OfflineBanner />
+  return (
+    <BrowserRouter>
+      <OfflineBanner />
+      {!user ? (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
@@ -108,33 +109,29 @@ function App() {
           </Routes>
           <Toaster />
         </div>
-      </BrowserRouter>
-    );
-  }
-
-  return (
-    <BrowserRouter>
-      <OfflineBanner />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <Navigation user={user} onLogout={handleLogout} />
-        <main className="pt-16">
-          <Routes>
-            <Route path="/" element={<Dashboard user={user} />} />
-            <Route path="/dashboard" element={<Dashboard user={user} />} />
-            <Route path="/service-form" element={<ServiceForm user={user} />} />
-            <Route path="/service-form/:equipmentId" element={<ServiceForm user={user} />} />
-            <Route path="/clients" element={<ClientList user={user} />} />
-            <Route path="/equipment" element={<EquipmentList user={user} />} />
-            <Route path="/service-reports" element={<ServiceReports user={user} />} />
-            <Route path="/reports" element={<ServiceReports user={user} />} />
-            {user?.role === 'admin' && (
-              <Route path="/users" element={<UserManagement user={user} />} />
-            )}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </main>
-        <Toaster />
-      </div>
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+          <Navigation user={user} onLogout={handleLogout} />
+          <main className="pt-16">
+            <Routes>
+              <Route path="/" element={<Dashboard user={user} />} />
+              <Route path="/dashboard" element={<Dashboard user={user} />} />
+              <Route path="/service-form" element={<ServiceForm user={user} />} />
+              <Route path="/service-form/:equipmentId" element={<ServiceForm user={user} />} />
+              <Route path="/clients" element={<ClientList user={user} />} />
+              <Route path="/equipment" element={<EquipmentList user={user} />} />
+              <Route path="/service-reports" element={<ServiceReports user={user} />} />
+              <Route path="/reports" element={<ServiceReports user={user} />} />
+              {user?.role === 'admin' && (
+                <Route path="/users" element={<UserManagement user={user} />} />
+              )}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </main>
+          <Toaster />
+          <AIChatBubble />
+        </div>
+      )}
     </BrowserRouter>
   );
 }

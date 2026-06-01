@@ -27,17 +27,18 @@ describe('Auth Controller Unit Tests', () => {
     it('should register a new user successfully (fullName)', async () => {
       req.body = { fullName: 'John Doe', email: 'john@example.com', password: 'password', role: 'admin' };
       User.findOne.mockResolvedValue(null);
-      User.create.mockResolvedValue({ id: 1, email: 'john@example.com', role: 'admin', toJSON: () => ({ id: 1, username: 'John Doe' }) });
+      User.create.mockResolvedValue({ id: 1, email: 'john@example.com', role: 'technician', toJSON: () => ({ id: 1, username: 'John Doe' }) });
       generateToken.mockReturnValue('mockedToken');
 
       await register(req, res);
 
       expect(User.findOne).toHaveBeenCalled();
+      // Role is always forced to 'technician' on self-registration regardless of what's sent
       expect(User.create).toHaveBeenCalledWith({
         username: 'John Doe',
         email: 'john@example.com',
         password: 'password',
-        role: 'admin'
+        role: 'technician'
       });
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
