@@ -10,7 +10,7 @@ export default function AIChatBubble() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('chat');
   const [input, setInput] = useState('');
-  const { messages, loading, sendMessage, clearMessages } = useAIChat();
+  const { messages, loading, sendMessage } = useAIChat();
   const messagesEndRef = useRef(null);
 
   useEffect(() => {

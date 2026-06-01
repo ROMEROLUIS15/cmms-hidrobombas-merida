@@ -12,7 +12,7 @@
 let Anthropic;
 try {
   Anthropic = require('@anthropic-ai/sdk');
-} catch (_e) {
+} catch {
   // Anthropic es opcional, usar solo si está instalado
   Anthropic = null;
 }
@@ -237,7 +237,7 @@ Respond ONLY with valid JSON.
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
-    } catch (_e) {
+    } catch {
       console.warn('Failed to parse LLM response as JSON');
     }
 
