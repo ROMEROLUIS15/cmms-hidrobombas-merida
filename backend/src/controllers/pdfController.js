@@ -12,6 +12,13 @@ const downloadReportPDF = asyncHandler(async (req, res) => {
 
   const doc = await buildReportPDF(id);
 
+  if (!doc) {
+    return res.status(404).json({
+      success: false,
+      message: 'Reporte no encontrado o no se pudo generar el PDF'
+    });
+  }
+
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader(
     'Content-Disposition',

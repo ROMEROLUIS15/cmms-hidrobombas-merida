@@ -9,6 +9,8 @@ const {
 } = require('../controllers/serviceReportController');
 const { downloadReportPDF, sendReportByEmail } = require('../controllers/pdfController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateRequest } = require('../middleware/zodMiddleware');
+const { createServiceReportSchema, updateServiceReportSchema } = require('../validators/serviceReportValidators');
 
 // All routes require authentication
 router.use(protect);
@@ -22,8 +24,8 @@ router.post('/:id/email', sendReportByEmail);
 // ── CRUD ─────────────────────────────────────────────────────────────────────
 router.get('/',        getServiceReports);
 router.get('/:id',     getServiceReportById);
-router.post('/',       createServiceReport);
-router.put('/:id',     updateServiceReport);
+router.post('/',       validateRequest(createServiceReportSchema), createServiceReport);
+router.put('/:id',     validateRequest(updateServiceReportSchema), updateServiceReport);
 router.delete('/:id',  deleteServiceReport);
 
 module.exports = router;

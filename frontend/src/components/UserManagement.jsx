@@ -25,7 +25,8 @@ const UserManagement = () => {
       const response = await axios.get(`${BACKEND_URL}/api/users`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setUsers(response.data);
+      // API returns { success: true, data: [...] }
+      setUsers(response.data?.data || response.data);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching users:', err.message);
@@ -104,7 +105,7 @@ const UserManagement = () => {
     return usernameMatch || emailMatch;
   });
 
-  if (loading) return <div className="p-8 text-center">Cargando gestión de usuarios...</div>;
+
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">

@@ -86,12 +86,12 @@ describe('Login Component', () => {
     });
 
     it('should show registration fields when in register mode', async () => {
-      const user = userEvent.setup();
       renderLogin({ isRegisterMode: true });
 
       expect(screen.getByTestId('full-name-input')).toBeInTheDocument();
       expect(screen.getByTestId('confirm-password-input')).toBeInTheDocument();
-      expect(screen.getByTestId('role-select')).toBeInTheDocument();
+      // role-select removed: users always register as technician (S3 security fix)
+      expect(screen.queryByTestId('role-select')).not.toBeInTheDocument();
     });
 
     it('should clear form when switching modes', async () => {

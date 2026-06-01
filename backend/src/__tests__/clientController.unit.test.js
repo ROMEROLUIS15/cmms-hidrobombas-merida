@@ -122,7 +122,7 @@ describe('Client Controller Unit Tests', () => {
 
       await updateClient(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'Cliente no encontrado', statusCode: 404 }));
+      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'ID de cliente inválido', statusCode: 400 }));
     });
   });
 

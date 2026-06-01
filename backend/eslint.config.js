@@ -23,6 +23,7 @@ module.exports = [
       'no-unused-vars': ['error', {
         varsIgnorePattern: '^_',
         argsIgnorePattern: '^(_|next)',
+        caughtErrorsIgnorePattern: '^_',
       }],
 
       // Console: warn/error are allowed (startup logs, error handling).

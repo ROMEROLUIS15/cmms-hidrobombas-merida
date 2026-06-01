@@ -154,7 +154,14 @@ const ServiceWizardContent = () => {
               </span>
             </div>
             
-            <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden">
+            <div
+              className="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden"
+              role="progressbar"
+              aria-valuenow={progressPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Progreso: ${Math.round(progressPercentage)}%`}
+            >
               <div 
                 className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progressPercentage}%` }}

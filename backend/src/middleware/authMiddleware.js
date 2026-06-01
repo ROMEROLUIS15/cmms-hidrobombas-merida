@@ -50,6 +50,7 @@ const protect = asyncHandler(async (req, res, next) => {
 
     // Attach user info to request
     req.user = {
+      id: decoded.userId,
       userId: decoded.userId,
       email: decoded.email,
       role: decoded.role
@@ -96,27 +97,32 @@ const authorize = (...roles) => {
   };
 };
 
-// Optional authentication - doesn't fail if no token
+/**
+ * optional — autenticación opcional.
+ * Si hay token válido (header o cookie), adjunta req.user; si no, continúa.
+ * Útil para rutas que sirven contenido público pero enriquecido para usuarios autenticados.
+ * Uso: router.get('/public-route', optional, handler)
+ */
 const optional = asyncHandler(async (req, res, next) => {
+  // Check Authorization header first, then cookie (same order as protect)
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(); // Continue without user
+  let token = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else if (req.cookies?.accessToken) {
+    token = req.cookies.accessToken;
   }
 
-  const token = authHeader.substring(7);
-  
-  if (!token) {
-    return next(); // Continue without user
-  }
+  if (!token) return next();
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     const user = await User.findOne({
-      where: { 
+      where: {
         id: decoded.userId,
-        isActive: true 
+        isActive: true
       }
     });
 

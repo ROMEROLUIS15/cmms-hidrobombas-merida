@@ -18,22 +18,51 @@ if (isVercel && !databaseUrl) {
 
 const isPostgres = !!databaseUrl;
 
-const sequelize = isPostgres
-  ? new Sequelize(databaseUrl, {
-      dialect: 'postgres',
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
+let sequelize;
+
+if (isPostgres) {
+  const url = new URL(databaseUrl);
+
+  sequelize = new Sequelize({
+    database: url.pathname.replace(/^\//, ''),
+    username: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    host: url.hostname,
+    port: Number(url.port) || 5432,
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        rejectUnauthorized: false,
       },
-      logging: false,
-    })
-  : new Sequelize({
-      dialect: 'sqlite',
-      storage: process.env.DB_STORAGE || './database.sqlite',
-      logging: false,
-    });
+      family: 4,
+      keepAlive: true,
+    },
+    logging: false,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 60000,
+      idle: 10000,
+    },
+  });
+} else {
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: process.env.DB_STORAGE || './database.sqlite',
+    logging: false,
+  });
+}
+
+// Fallback a SQLite si la conexión PostgreSQL falla en desarrollo
+function fallbackToSQLite() {
+  if (process.env.VERCEL) return;
+  console.warn('⚠️  Fallback a SQLite para desarrollo local.');
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: process.env.DB_STORAGE || './database.sqlite',
+    logging: false,
+  });
+}
 
 // Test connection
 const testConnection = async () => {
@@ -42,8 +71,8 @@ const testConnection = async () => {
     console.warn('✅ Database connection established successfully');
   } catch (error) {
     console.error('❌ Unable to connect to database:', error.message);
-    if (!process.env.VERCEL) process.exit(1);
-    throw error;
+    if (process.env.VERCEL) throw error;
+    fallbackToSQLite();
   }
 };
 
@@ -54,9 +83,8 @@ const initializeDatabase = async () => {
     await sequelize.sync();
     console.warn('✅ Database synchronized successfully');
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
-    if (!process.env.VERCEL) process.exit(1);
-    throw error;
+    console.error('❌ Database synchronization failed:', error.message);
+    if (process.env.VERCEL) throw error;
   }
 };
 
