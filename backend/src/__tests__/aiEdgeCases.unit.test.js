@@ -76,6 +76,19 @@ describe('AI Module Edge Cases', () => {
 
   describe('container DI overrides work at runtime', () => {
     const { container, setCreateLLM, setCreateEmbeddings, resetToDefaults } = require('../ai/container');
+    const ORIGINAL_GROQ_KEY = process.env.GROQ_API_KEY;
+
+    beforeAll(() => {
+      process.env.GROQ_API_KEY = ORIGINAL_GROQ_KEY || 'test-key-for-test';
+    });
+
+    afterAll(() => {
+      if (ORIGINAL_GROQ_KEY === undefined) {
+        delete process.env.GROQ_API_KEY;
+      } else {
+        process.env.GROQ_API_KEY = ORIGINAL_GROQ_KEY;
+      }
+    });
 
     afterEach(() => {
       resetToDefaults();
