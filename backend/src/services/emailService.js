@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { logger } = require('../utils/logger');
 
 const createTransporter = () => {
   const config = {
@@ -12,7 +13,7 @@ const createTransporter = () => {
   };
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('⚠️ SMTP credentials not configured. Email sending is disabled.');
+    logger.warn('SMTP credentials not configured; email sending disabled');
     return null;
   }
 
@@ -23,7 +24,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   const transporter = createTransporter();
 
   if (!transporter) {
-    console.warn(`[EmailService] SMTP not configured — simulating password reset for ${email}`);
+    logger.warn('SMTP not configured; simulating password reset email', { email });
     return { simulated: true };
   }
 
@@ -72,10 +73,10 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.warn(`[EmailService] Password reset email sent: ${info.messageId}`);
+    logger.info('Password reset email sent', { messageId: info.messageId });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending email:', error.message);
+    logger.error('Error sending password reset email', { message: error.message });
     return { success: false, error: error.message };
   }
 };
@@ -84,7 +85,7 @@ const sendWelcomeEmail = async (email, name) => {
   const transporter = createTransporter();
 
   if (!transporter) {
-    console.warn(`[EmailService] SMTP not configured — simulating welcome email for ${email}`);
+    logger.warn('SMTP not configured; simulating welcome email', { email });
     return { simulated: true };
   }
 
@@ -124,7 +125,7 @@ const sendWelcomeEmail = async (email, name) => {
     const info = await transporter.sendMail(mailOptions);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending welcome email:', error.message);
+    logger.error('Error sending welcome email', { message: error.message });
     return { success: false, error: error.message };
   }
 };
@@ -133,7 +134,7 @@ const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
   const transporter = createTransporter();
 
   if (!transporter) {
-    console.warn(`[EmailService] SMTP not configured — simulating report email for ${clientEmail}`);
+    logger.warn('SMTP not configured; simulating service report email', { email: clientEmail });
     return { simulated: true };
   }
 
@@ -192,10 +193,10 @@ const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.warn(`[EmailService] Service report email sent: ${info.messageId}`);
+    logger.info('Service report email sent', { messageId: info.messageId });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Error sending service report email:', error.message);
+    logger.error('Error sending service report email', { message: error.message });
     return { success: false, error: error.message };
   }
 };

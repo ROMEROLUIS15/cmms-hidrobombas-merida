@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit');
 const { ServiceReport, Equipment, Client, User } = require('../models');
+const { logger } = require('../utils/logger');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -360,7 +361,7 @@ const buildReportPDF = async (reportId) => {
       // Draw image fitting in the box
       doc.image(buffer, sig2X + 6, sigY + 10, { fit: [sigW - 12, sigH - 25], align: 'center' });
     } catch (e) {
-      console.error('Error rendering signature in PDF:', e.message);
+      logger.error('Error rendering signature in PDF', { message: e.message });
     }
   }
 
