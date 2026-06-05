@@ -1,4 +1,5 @@
 const { logger } = require('../utils/logger');
+const { reportError } = require('../utils/errorReporter');
 
 /**
  * Global Error Handler Middleware
@@ -7,13 +8,13 @@ const errorHandler = (error, req, res, _next) => {
   const statusCode = error.statusCode || 500;
   // Solo registramos como error real los 5xx; los 4xx son flujo esperado.
   if (statusCode >= 500) {
-    logger.error('Unhandled error', {
+    const meta = {
       correlationId: req.correlationId,
       method: req.method,
       path: req.originalUrl,
-      message: error.message,
-      stack: error.stack,
-    });
+    };
+    logger.error('Unhandled error', { ...meta, message: error.message, stack: error.stack });
+    reportError(error, meta);
   }
 
   // Handle Sequelize validation errors

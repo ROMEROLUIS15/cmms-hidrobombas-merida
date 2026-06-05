@@ -3,8 +3,12 @@ require('./models'); // Import models to ensure they are registered with Sequeli
 const { initializeDatabase } = require('./config/database');
 const { startKeepAlive, stopKeepAlive } = require('./services/neonKeepAlive');
 const { logger } = require('./utils/logger');
+const { initErrorReporter, reportError } = require('./utils/errorReporter');
 
 const PORT = process.env.PORT || 8001;
+
+// Inicializa el reporte de errores externo (Sentry) si está configurado.
+initErrorReporter();
 
 // Initialize database and start server
 const startServer = async () => {
@@ -31,12 +35,14 @@ const startServer = async () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled Rejection', { reason: reason instanceof Error ? reason.message : String(reason) });
+  reportError(reason instanceof Error ? reason : new Error(String(reason)), { type: 'unhandledRejection' });
   if (!process.env.VERCEL) process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception', { message: error.message });
+  reportError(error, { type: 'uncaughtException' });
   if (!process.env.VERCEL) process.exit(1);
 });
 
