@@ -21,6 +21,12 @@ node_modules/
 frontend/coverage/
 backend/coverage/
 
+# Playwright e2e
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Next.js
 /.next/
 /out/

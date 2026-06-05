@@ -42,7 +42,13 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Un 401 en una peticion autenticada = sesion expirada/invalida: limpiar y
+    // volver al login. Pero NO en el propio login/registro: ahi el 401 es un
+    // fallo de credenciales que el formulario debe mostrar, no recargar la pagina.
+    const requestUrl = error.config?.url || '';
+    const isAuthAttempt = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+    if (error.response?.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
