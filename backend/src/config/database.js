@@ -76,14 +76,18 @@ const testConnection = async () => {
   }
 };
 
-// Initialize database
+// Initialize database — aplica migraciones versionadas (ya no sync() implícito).
 const initializeDatabase = async () => {
   try {
     await testConnection();
-    await sequelize.sync();
-    console.warn('✅ Database synchronized successfully');
+    // Lazy require para evitar dependencia circular con el migrator.
+    const { runMigrations } = require('./migrator');
+    const applied = await runMigrations(sequelize);
+    console.warn(
+      `✅ Database migrations up to date${applied.length ? ` (applied ${applied.length})` : ''}`
+    );
   } catch (error) {
-    console.error('❌ Database synchronization failed:', error.message);
+    console.error('❌ Database migration failed:', error.message);
     if (process.env.VERCEL) throw error;
   }
 };

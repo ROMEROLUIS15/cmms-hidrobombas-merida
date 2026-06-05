@@ -68,9 +68,11 @@ Regla de ownership de un reporte: **admin/supervisor siempre**; un técnico acce
 
 Mejoras planificadas (ver auditoría del proyecto):
 
-- Revocación server-side de refresh tokens (denylist) — hoy son JWT stateless.
-- Sistema de migraciones formal (reemplazar `sequelize.sync()` en arranque).
-- Logging estructurado + monitoreo de errores (Sentry) + correlation IDs.
+- Integración de monitoreo de errores externo (Sentry/Datadog) sobre el logger ya existente.
+- Persistencia/escalado del vector store de IA (pgvector) en lugar de memoria.
+
+Ya implementado: revocación server-side de refresh tokens (denylist), logging
+estructurado + correlation IDs, y migraciones versionadas (ver `npm run migrate`).
 
 ---
 

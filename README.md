@@ -138,9 +138,21 @@ npm install
 cd backend
 cp .env.example .env   # edita los valores
 
-# Pobla la BD con datos de prueba (DESTRUCTIVO: borra y recrea)
+# Aplica las migraciones de esquema
+npm run migrate        # 'npm run migrate:status' para ver el estado
+
+# (Opcional) Pobla la BD con datos de prueba (DESTRUCTIVO: borra y recrea)
 npm run seed:dummy
 ```
+
+### Migraciones de esquema
+
+El esquema se gestiona con migraciones versionadas en `backend/migrations/`
+(runner propio, sin dependencias). El arranque del servidor aplica las
+pendientes automáticamente; ya **no** se usa `sequelize.sync()` implícito en
+producción. Para añadir un cambio de esquema, crea un nuevo archivo
+`000X-descripcion.js` que exporte `up({ queryInterface, sequelize, DataTypes })`
+y `down(...)`.
 
 ---
 
