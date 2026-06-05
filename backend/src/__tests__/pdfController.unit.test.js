@@ -1,19 +1,29 @@
 const { downloadReportPDF } = require('../controllers/pdfController');
 const { buildReportPDF } = require('../services/pdfService');
+const { ServiceReport } = require('../models');
 
 jest.mock('../services/pdfService');
+jest.mock('../models', () => ({
+  ServiceReport: { findByPk: jest.fn() },
+  Equipment: {},
+  Client: {},
+  User: {},
+  TechnicianEquipment: { findAll: jest.fn() }
+}));
 
 describe('PDF Controller Unit Tests', () => {
   let req, res;
 
   beforeEach(() => {
-    req = { params: {} };
+    // Usuario privilegiado: omite la verificación de ownership.
+    req = { params: {}, user: { role: 'admin' } };
     res = {
       setHeader: jest.fn(),
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
     };
     jest.clearAllMocks();
+    ServiceReport.findByPk.mockResolvedValue({ id: 'test-uuid-123', userId: 'u1', equipmentId: 'e1' });
   });
 
   describe('downloadReportPDF', () => {

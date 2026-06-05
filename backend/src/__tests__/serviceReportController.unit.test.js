@@ -48,6 +48,7 @@ describe('Service Report Controller Unit Tests', () => {
   describe('getServiceReportById', () => {
     it('should return a report by id', async () => {
       req.params = { id: validUUID };
+      req.user = { role: 'admin' };
       ServiceReport.findByPk.mockResolvedValue({ id: validUUID, reportNumber: 'SRV-0001' });
 
       await getServiceReportById(req, res, next);
@@ -118,8 +119,9 @@ describe('Service Report Controller Unit Tests', () => {
 
     it('should update report successfully', async () => {
       req.params = { id: validUUID };
+      req.user = { role: 'admin' };
       req.body = { visit_type: 'eventual', motor_1_data: { amps: 15 } };
-      
+
       const mockReport = { update: jest.fn().mockResolvedValue() };
       ServiceReport.findByPk.mockResolvedValue(mockReport);
 
@@ -154,6 +156,7 @@ describe('Service Report Controller Unit Tests', () => {
 
     it('should delete report successfully', async () => {
       req.params = { id: validUUID };
+      req.user = { role: 'admin' };
       const mockReport = { destroy: jest.fn().mockResolvedValue() };
       ServiceReport.findByPk.mockResolvedValue(mockReport);
 

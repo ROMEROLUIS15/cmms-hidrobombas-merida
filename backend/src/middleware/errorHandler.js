@@ -1,9 +1,20 @@
+const { logger } = require('../utils/logger');
+const { reportError } = require('../utils/errorReporter');
+
 /**
  * Global Error Handler Middleware
  */
 const errorHandler = (error, req, res, _next) => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.error('Global error handler caught:', error.message);
+  const statusCode = error.statusCode || 500;
+  // Solo registramos como error real los 5xx; los 4xx son flujo esperado.
+  if (statusCode >= 500) {
+    const meta = {
+      correlationId: req.correlationId,
+      method: req.method,
+      path: req.originalUrl,
+    };
+    logger.error('Unhandled error', { ...meta, message: error.message, stack: error.stack });
+    reportError(error, meta);
   }
 
   // Handle Sequelize validation errors
@@ -31,9 +42,10 @@ const errorHandler = (error, req, res, _next) => {
   }
 
   // Generic Error Fallback
-  res.status(error.statusCode || 500).json({
+  res.status(statusCode).json({
     success: false,
     message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    ...(req.correlationId && { correlationId: req.correlationId }),
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 };

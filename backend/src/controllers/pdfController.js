@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const { buildReportPDF } = require('../services/pdfService');
 const { sendServiceReportEmail } = require('../services/emailService');
 const { ServiceReport, Equipment, Client, User } = require('../models');
+const { canAccessReport } = require('../utils/ownership');
 
 /**
  * GET /api/service-reports/:id/pdf
@@ -9,6 +10,20 @@ const { ServiceReport, Equipment, Client, User } = require('../models');
  */
 const downloadReportPDF = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  const report = await ServiceReport.findByPk(id, { attributes: ['id', 'userId', 'equipmentId'] });
+  if (!report) {
+    return res.status(404).json({
+      success: false,
+      message: 'Reporte no encontrado o no se pudo generar el PDF'
+    });
+  }
+  if (!(await canAccessReport(req.user, report))) {
+    return res.status(403).json({
+      success: false,
+      message: 'No tienes permiso para acceder a este reporte'
+    });
+  }
 
   const doc = await buildReportPDF(id);
 
@@ -54,6 +69,13 @@ const sendReportByEmail = asyncHandler(async (req, res) => {
     return res.status(404).json({
       success: false,
       message: 'Reporte no encontrado'
+    });
+  }
+
+  if (!(await canAccessReport(req.user, report))) {
+    return res.status(403).json({
+      success: false,
+      message: 'No tienes permiso para acceder a este reporte'
     });
   }
 

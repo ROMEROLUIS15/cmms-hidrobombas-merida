@@ -4,7 +4,7 @@
 
 | Endpoint | Método | Auth | Función |
 |----------|--------|------|---------|
-| `/api/ai/agent/tools` | GET | ❌ | Listar 6 herramientas disponibles |
+| `/api/ai/agent/tools` | GET | ✅ | Listar 6 herramientas disponibles |
 | `/api/ai/agent/ask` | POST | ✅ | Interface principal (cualquier solicitud) |
 | `/api/ai/agent/report` | POST | ✅ | Generar reporte profesional |
 | `/api/ai/agent/anomaly` | POST | ✅ | Detectar anomalías |
@@ -15,12 +15,13 @@
 ---
 
 ## 🌐 Endpoint 1: GET /api/ai/agent/tools
-**Pública** - Lista todas las herramientas disponibles
+**Requiere autenticación** - Lista todas las herramientas disponibles
 
 ### Request
 ```http
 GET /api/ai/agent/tools HTTP/1.1
 Host: localhost:5000
+Authorization: Bearer <JWT>
 ```
 
 ### Response (200 OK)

@@ -222,4 +222,101 @@ describe('ServiceReport Routes Integration Tests', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  describe('Ownership / IDOR protection', () => {
+    const { TechnicianEquipment } = require('../models');
+    let technician;
+    let technicianToken;
+
+    const tokenFor = (user) =>
+      jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'test_secret_for_testing_only',
+        { expiresIn: '1d' }
+      );
+
+    beforeEach(async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      technician = await User.create({
+        username: 'tech_other',
+        email: 'tech_other@example.com',
+        password: hashedPassword,
+        role: 'technician',
+        isActive: true
+      });
+      technicianToken = tokenFor(technician);
+    });
+
+    it('forbids a technician from reading a report of unassigned equipment', async () => {
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9001',
+        reportDate: new Date(),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+
+      await request(app)
+        .get(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+    });
+
+    it('forbids a technician from deleting a report of unassigned equipment', async () => {
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9002',
+        reportDate: new Date(),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+
+      await request(app)
+        .delete(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+
+      const stillThere = await ServiceReport.findByPk(report.id);
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('allows a technician to read a report of assigned equipment', async () => {
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9003',
+        reportDate: new Date(),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+      await TechnicianEquipment.create({
+        technicianId: technician.id,
+        equipmentId: testEquipment.id
+      });
+
+      const response = await request(app)
+        .get(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(report.id);
+    });
+
+    it('list only returns reports the technician can access', async () => {
+      await ServiceReport.create({
+        reportNumber: 'SRV-9004',
+        reportDate: new Date(),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+
+      const response = await request(app)
+        .get('/api/service-reports')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.length).toBe(0);
+    });
+  });
 });

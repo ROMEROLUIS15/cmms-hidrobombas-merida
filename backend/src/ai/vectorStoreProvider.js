@@ -95,8 +95,90 @@ const memoryProvider = {
   },
 };
 
+const PGVECTOR_TABLE = process.env.PGVECTOR_TABLE || 'ai_report_embeddings';
+
+/**
+ * Provider persistente sobre PostgreSQL + extensión pgvector.
+ * Reutiliza @langchain/community (ya dependencia) y la misma BD del proyecto.
+ * Solo aplicable con DATABASE_URL (Postgres); en SQLite/dev usar "memory".
+ * @type {VectorStoreProvider}
+ */
+const pgvectorProvider = {
+  /** @type {VectorStore|null} */
+  _store: null,
+
+  async _init() {
+    if (this._store) return this._store;
+
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error(
+        'VECTOR_STORE_PROVIDER=pgvector requiere DATABASE_URL (PostgreSQL). ' +
+        'Usa "memory" en desarrollo con SQLite.'
+      );
+    }
+
+    let PGVectorStore;
+    try {
+      ({ PGVectorStore } = require('@langchain/community/vectorstores/pgvector'));
+    } catch (err) {
+      throw new Error(`No se pudo cargar PGVectorStore de @langchain/community: ${err.message}`, { cause: err });
+    }
+
+    const embeddings = container.createEmbeddings();
+    this._store = await PGVectorStore.initialize(embeddings, {
+      postgresConnectionOptions: {
+        connectionString: databaseUrl,
+        ssl: { rejectUnauthorized: false },
+      },
+      tableName: PGVECTOR_TABLE,
+      distanceStrategy: 'cosine',
+    });
+
+    return this._store;
+  },
+
+  async getOrCreateStore() {
+    const store = await this._init();
+
+    // Persistente: poblar SOLO si la tabla está vacía (evita duplicar embeddings
+    // en cada arranque). El reindexado fuerza el repoblado vía clear().
+    let count = 0;
+    try {
+      const res = await store.pool.query(`SELECT COUNT(*)::int AS n FROM "${store.computedTableName}"`);
+      count = res.rows[0].n;
+    } catch {
+      // Conteo no disponible (tabla recién creada / permisos): tratar como vacía.
+    }
+
+    if (count === 0) {
+      const docs = await loadReports();
+      if (docs.length > 0) await store.addDocuments(docs);
+    }
+
+    return store;
+  },
+
+  async searchSimilar(query, k = 5) {
+    const store = await this._init();
+    return store.similaritySearch(query, k);
+  },
+
+  async clear() {
+    if (this._store) {
+      try {
+        await this._store.pool.query(`DELETE FROM "${this._store.computedTableName}"`);
+      } catch {
+        // Tabla aún inexistente o sin permisos: ignorar.
+      }
+    }
+    this._store = null;
+  },
+};
+
 const providers = {
   memory: memoryProvider,
+  pgvector: pgvectorProvider,
 };
 
 const providerEnv = (process.env.VECTOR_STORE_PROVIDER || 'memory').toLowerCase();
@@ -107,7 +189,7 @@ let activeProvider = providers[providerEnv];
 if (!activeProvider) {
   console.warn(
     `VECTOR_STORE_PROVIDER "${providerEnv}" no es válido. Usando "memory". ` +
-    'Valores soportados: memory'
+    'Valores soportados: memory, pgvector'
   );
   activeProvider = providers.memory;
 }

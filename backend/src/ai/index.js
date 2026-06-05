@@ -31,7 +31,7 @@ async function chat(message) {
 
 /** @returns {Promise<void>} */
 async function reindexReports() {
-  clearVectorStore();
+  await clearVectorStore();
   clearRAGChain();
   await getOrCreateVectorStore();
 }

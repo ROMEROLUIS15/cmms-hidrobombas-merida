@@ -36,11 +36,9 @@ router.post('/stream-ask', aiStreamAsk);
 // Rutas del Agent Maestro (nuevas)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// GET /api/ai/agent/tools - Listar herramientas disponibles (sin autenticación)
-router.get('/agent/tools', (req, res, next) => {
-  // Permitir sin autenticación para descubrimiento
-  getAvailableTools(req, res).catch(next);
-});
+// GET /api/ai/agent/tools - Listar herramientas disponibles (requiere auth,
+// hereda router.use(protect) — expone detalles internos del agente).
+router.get('/agent/tools', getAvailableTools);
 
 // POST /api/ai/agent/ask - Interface principal
 router.post('/agent/ask', agentAsk);

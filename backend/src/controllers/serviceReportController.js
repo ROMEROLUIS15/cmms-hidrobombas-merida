@@ -1,6 +1,14 @@
 const asyncHandler = require('express-async-handler');
+const { Op } = require('sequelize');
 const { ServiceReport, Equipment, Client, User } = require('../models');
 const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
+const { isPrivileged, getUserId, getAssignedEquipmentIds, canAccessReport } = require('../utils/ownership');
+
+const forbidden = () => {
+  const error = new Error('No tienes permiso para acceder a este reporte');
+  error.statusCode = 403;
+  return error;
+};
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -25,7 +33,24 @@ const generateReportNumber = async () => {
 const getServiceReports = asyncHandler(async (req, res) => {
   const { page, limit, offset } = getPaginationParams(req.query);
 
+  // Ownership: admin/supervisor ven todo; el técnico solo sus reportes o los
+  // de equipos asignados.
+  let where;
+  if (!isPrivileged(req.user)) {
+    const uid = getUserId(req.user);
+    const assignedEquipmentIds = await getAssignedEquipmentIds(uid);
+    where = {
+      [Op.or]: [
+        { userId: uid },
+        ...(assignedEquipmentIds.length > 0
+          ? [{ equipmentId: { [Op.in]: assignedEquipmentIds } }]
+          : []),
+      ],
+    };
+  }
+
   const { rows: reports, count: total } = await ServiceReport.findAndCountAll({
+    ...(where && { where }),
     include: [
       {
         model: Equipment,
@@ -60,6 +85,10 @@ const getServiceReportById = asyncHandler(async (req, res) => {
     const error = new Error('Reporte no encontrado');
     error.statusCode = 404;
     throw error;
+  }
+
+  if (!(await canAccessReport(req.user, report))) {
+    throw forbidden();
   }
 
   const fullReport = await ServiceReport.findByPk(report.id, {
@@ -150,6 +179,10 @@ const updateServiceReport = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  if (!(await canAccessReport(req.user, report))) {
+    throw forbidden();
+  }
+
   const {
     visit_type, system_name, report_date,
     water_energy_data, motor_1_data, motor_2_data, motor_3_data,
@@ -187,6 +220,10 @@ const deleteServiceReport = asyncHandler(async (req, res) => {
     const error = new Error('Reporte no encontrado');
     error.statusCode = 404;
     throw error;
+  }
+
+  if (!(await canAccessReport(req.user, report))) {
+    throw forbidden();
   }
 
   await report.destroy();

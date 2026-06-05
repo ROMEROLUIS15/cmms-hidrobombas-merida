@@ -1,6 +1,8 @@
 const asyncHandler = require('express-async-handler');
+const { Op } = require('sequelize');
 const { Equipment, Client, ServiceReport } = require('../models');
 const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
+const { isPrivileged, getUserId, getAssignedEquipmentIds, canAccessEquipment } = require('../utils/ownership');
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,6 +18,12 @@ const getEquipmentById = asyncHandler(async (req, res) => {
     throw error;
   }
   
+  if (!(await canAccessEquipment(req.user, id))) {
+    const error = new Error('No tienes permiso para acceder a este equipo');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const eq = await Equipment.findByPk(id, {
     include: [
       { model: Client, as: 'client' },
@@ -43,6 +51,13 @@ const getEquipment = asyncHandler(async (req, res) => {
   const { page, limit, offset } = getPaginationParams(req.query);
 
   const where = clientId ? { clientId } : {};
+
+  // Ownership: el técnico solo ve equipos asignados (intersectado con el filtro
+  // por cliente si lo hay).
+  if (!isPrivileged(req.user)) {
+    const assignedIds = await getAssignedEquipmentIds(getUserId(req.user));
+    where.id = { [Op.in]: assignedIds };
+  }
 
   const { rows: equipment, count: total } = await Equipment.findAndCountAll({
     where,

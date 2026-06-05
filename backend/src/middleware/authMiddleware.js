@@ -98,6 +98,37 @@ const authorize = (...roles) => {
 };
 
 /**
+ * authorizeSelfOrAdmin — permite el acceso si el usuario es admin/supervisor
+ * o si el parámetro de ruta indicado corresponde a su propio id.
+ * Evita que un técnico consulte recursos asociados a OTRO técnico.
+ * @param {string} paramName - nombre del param de ruta con el id de técnico/usuario
+ */
+const authorizeSelfOrAdmin = (paramName) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (['admin', 'supervisor'].includes(req.user.role)) {
+      return next();
+    }
+
+    const ownId = req.user.id || req.user.userId;
+    if (ownId && req.params[paramName] === ownId) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. You can only access your own resources'
+    });
+  };
+};
+
+/**
  * optional — autenticación opcional.
  * Si hay token válido (header o cookie), adjunta req.user; si no, continúa.
  * Útil para rutas que sirven contenido público pero enriquecido para usuarios autenticados.
@@ -143,5 +174,6 @@ const optional = asyncHandler(async (req, res, next) => {
 module.exports = {
   protect,
   authorize,
+  authorizeSelfOrAdmin,
   optional
 };
