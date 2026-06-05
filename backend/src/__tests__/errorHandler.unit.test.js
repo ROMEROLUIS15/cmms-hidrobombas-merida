@@ -2,6 +2,7 @@ const { errorHandler } = require('../middleware/errorHandler');
 
 describe('Error Handler Middleware Unit Tests', () => {
   let req, res, next;
+  let originalEnv;
 
   beforeEach(() => {
     req = {};
@@ -11,12 +12,12 @@ describe('Error Handler Middleware Unit Tests', () => {
     };
     next = jest.fn();
     // Cache original NODE_ENV
-    this.originalEnv = process.env.NODE_ENV;
+    originalEnv = process.env.NODE_ENV;
   });
 
   afterEach(() => {
     // Restore original NODE_ENV
-    process.env.NODE_ENV = this.originalEnv;
+    process.env.NODE_ENV = originalEnv;
     jest.restoreAllMocks();
   });
 
