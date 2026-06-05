@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -32,13 +33,14 @@ const generateToken = (userId, email, role) => {
 };
 
 /**
- * Generate a refresh token for a user
+ * Generate a refresh token for a user.
+ * Incluye un `jti` único para poder revocarlo (denylist).
  * @param {number} userId - The user's ID
  * @returns {string} - The signed refresh token
  */
 const generateRefreshToken = (userId) => {
   return jwt.sign(
-    { userId, type: 'refresh' },
+    { userId, type: 'refresh', jti: crypto.randomUUID() },
     REFRESH_TOKEN_SECRET,
     { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
   );
