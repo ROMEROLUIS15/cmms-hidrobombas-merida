@@ -5,6 +5,7 @@
 const { MemoryVectorStore } = require('@langchain/core/vectorstores');
 const { container } = require('./container');
 const { ServiceReport, Equipment } = require('../models');
+const { logger } = require('../utils/logger');
 
 /**
  * @param {ServiceReportRow} report
@@ -187,10 +188,10 @@ const providerEnv = (process.env.VECTOR_STORE_PROVIDER || 'memory').toLowerCase(
 let activeProvider = providers[providerEnv];
 
 if (!activeProvider) {
-  console.warn(
-    `VECTOR_STORE_PROVIDER "${providerEnv}" no es válido. Usando "memory". ` +
-    'Valores soportados: memory, pgvector'
-  );
+  logger.warn('VECTOR_STORE_PROVIDER inválido; usando "memory"', {
+    provided: providerEnv,
+    supported: ['memory', 'pgvector'],
+  });
   activeProvider = providers.memory;
 }
 

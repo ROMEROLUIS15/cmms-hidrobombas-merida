@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { IdempotencyKey } = require('../models');
 const { Op } = require('sequelize');
+const { logger } = require('../utils/logger');
 
 const idempotencyMiddleware = asyncHandler(async (req, res, next) => {
   const idempotencyKey = req.headers['x-idempotency-key'];
@@ -23,7 +24,10 @@ const idempotencyMiddleware = asyncHandler(async (req, res, next) => {
   });
 
   if (existingKey) {
-    console.warn(`[Idempotency] Duplicate request blocked: ${idempotencyKey}`);
+    logger.warn('Idempotency: duplicate request blocked', {
+      correlationId: req.correlationId,
+      idempotencyKey,
+    });
     let cachedBody;
     try {
       cachedBody = JSON.parse(existingKey.responseBody);
@@ -44,7 +48,10 @@ const idempotencyMiddleware = asyncHandler(async (req, res, next) => {
         responseStatus: res.statusCode,
         responseBody: JSON.stringify(body),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      }).catch(err => console.error('Error saving idempotency key:', err));
+      }).catch(err => logger.error('Idempotency: error saving key', {
+        correlationId: req.correlationId,
+        message: err.message,
+      }));
     }
 
     return originalJson(body);

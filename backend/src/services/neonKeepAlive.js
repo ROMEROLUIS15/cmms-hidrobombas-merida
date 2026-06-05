@@ -1,14 +1,14 @@
-/* eslint-disable no-console */
 /**
  * 🔄 Neon Keep-Alive Service
- * 
+ *
  * Mantiene la conexión de Neon despierta ejecutando queries simples
  * cada X minutos para evitar que cierre la conexión inactiva.
- * 
+ *
  * Neon cierra conexiones después de ~15 minutos de inactividad en el plan gratuito.
  */
 
 const { sequelize } = require('../config/database');
+const { logger } = require('../utils/logger');
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const KEEP_ALIVE_INTERVAL = process.env.NEON_KEEP_ALIVE_INTERVAL || 10 * 60 * 1000; // 10 minutos (default)
@@ -25,12 +25,11 @@ const executeHealthCheck = async () => {
     // Query simple que no afecta nada
     await sequelize.query('SELECT 1 as health_check;');
     
-    const timestamp = new Date().toLocaleTimeString('es-ES');
-    console.log(`🔄 Neon Keep-Alive: ✅ Connection refreshed (${timestamp})`);
-    
+    logger.info('Neon Keep-Alive: connection refreshed');
+
     return true;
   } catch (error) {
-    console.warn(`⚠️  Neon Keep-Alive failed: ${error.message}`);
+    logger.warn('Neon Keep-Alive failed', { message: error.message });
     return false;
   }
 };
@@ -47,12 +46,14 @@ const startKeepAlive = () => {
   
   if (!KEEP_ALIVE_ENABLED || !isPostgres) {
     if (!isPostgres) {
-      console.log('ℹ️  Neon Keep-Alive: Deshabilitado (usando SQLite)');
+      logger.info('Neon Keep-Alive: disabled (using SQLite)');
     }
     return;
   }
 
-  console.log(`ℹ️  Neon Keep-Alive: Iniciando (intervalo: ${KEEP_ALIVE_INTERVAL / 1000 / 60} minutos)`);
+  logger.info('Neon Keep-Alive: starting', {
+    intervalMinutes: KEEP_ALIVE_INTERVAL / 1000 / 60,
+  });
 
   // Ejecutar health check inmediatamente al iniciar
   executeHealthCheck();
@@ -69,7 +70,7 @@ const stopKeepAlive = () => {
   if (keepAliveInterval) {
     clearInterval(keepAliveInterval);
     keepAliveInterval = null;
-    console.log('🛑 Neon Keep-Alive: Detenido');
+    logger.info('Neon Keep-Alive: stopped');
   }
 };
 

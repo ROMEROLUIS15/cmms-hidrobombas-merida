@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler');
 const { User, PasswordResetToken } = require('../models');
 const { Op } = require('sequelize');
 const { sendPasswordResetEmail } = require('../services/emailService');
+const { logger } = require('../utils/logger');
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -34,7 +35,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
   await PasswordResetToken.create({ token, expiresAt, userId: user.id });
 
   const emailResult = await sendPasswordResetEmail(user.email, token);
-  console.warn(`📧 Password reset email to ${user.email}:`, emailResult.success ? 'OK' : emailResult.error || 'simulated');
+  logger.info('Password reset email processed', {
+    correlationId: req.correlationId,
+    email: user.email,
+    result: emailResult.success ? 'sent' : emailResult.error || 'simulated',
+  });
 
   res.status(200).json({
     success: true,

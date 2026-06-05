@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
+const { logger } = require('../utils/logger');
 
 // Forzar la carga de pg para entornos serverless como Vercel
 try {
@@ -56,7 +57,7 @@ if (isPostgres) {
 // Fallback a SQLite si la conexión PostgreSQL falla en desarrollo
 function fallbackToSQLite() {
   if (process.env.VERCEL) return;
-  console.warn('⚠️  Fallback a SQLite para desarrollo local.');
+  logger.warn('Database: fallback to SQLite for local development');
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || './database.sqlite',
@@ -68,9 +69,9 @@ function fallbackToSQLite() {
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.warn('✅ Database connection established successfully');
+    logger.info('Database connection established');
   } catch (error) {
-    console.error('❌ Unable to connect to database:', error.message);
+    logger.error('Database connection failed', { message: error.message });
     if (process.env.VERCEL) throw error;
     fallbackToSQLite();
   }
@@ -83,11 +84,9 @@ const initializeDatabase = async () => {
     // Lazy require para evitar dependencia circular con el migrator.
     const { runMigrations } = require('./migrator');
     const applied = await runMigrations(sequelize);
-    console.warn(
-      `✅ Database migrations up to date${applied.length ? ` (applied ${applied.length})` : ''}`
-    );
+    logger.info('Database migrations up to date', { applied: applied.length });
   } catch (error) {
-    console.error('❌ Database migration failed:', error.message);
+    logger.error('Database migration failed', { message: error.message });
     if (process.env.VERCEL) throw error;
   }
 };
