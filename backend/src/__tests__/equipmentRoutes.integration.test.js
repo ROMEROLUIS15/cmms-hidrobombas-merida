@@ -192,4 +192,69 @@ describe('Equipment Routes Integration Tests', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  describe('Ownership / role restrictions', () => {
+    const { TechnicianEquipment } = require('../models');
+    let technician;
+    let technicianToken;
+
+    beforeEach(async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      technician = await User.create({
+        username: 'tech_eq',
+        email: 'tech_eq@example.com',
+        password: hashedPassword,
+        role: 'technician',
+        isActive: true
+      });
+      technicianToken = jwt.sign(
+        { userId: technician.id, email: technician.email, role: technician.role },
+        process.env.JWT_SECRET || 'test_secret_for_testing_only',
+        { expiresIn: '1d' }
+      );
+    });
+
+    it('list returns only equipment assigned to the technician', async () => {
+      const eqA = await Equipment.create({ name: 'Pump A', type: 'centrifugal', serialNumber: 'SN-A', clientId: testClient.id });
+      await Equipment.create({ name: 'Pump B', type: 'centrifugal', serialNumber: 'SN-B', clientId: testClient.id });
+      await TechnicianEquipment.create({ technicianId: technician.id, equipmentId: eqA.id });
+
+      const response = await request(app)
+        .get('/api/equipment')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(200);
+
+      expect(response.body.data.length).toBe(1);
+      expect(response.body.data[0].id).toBe(eqA.id);
+    });
+
+    it('forbids a technician from reading unassigned equipment', async () => {
+      const eq = await Equipment.create({ name: 'Pump X', type: 'centrifugal', serialNumber: 'SN-X', clientId: testClient.id });
+
+      await request(app)
+        .get(`/api/equipment/${eq.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+    });
+
+    it('forbids a technician from creating equipment', async () => {
+      await request(app)
+        .post('/api/equipment')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ name: 'New Pump', type: 'centrifugal', clientId: testClient.id })
+        .expect(403);
+    });
+
+    it('forbids a technician from deleting equipment', async () => {
+      const eq = await Equipment.create({ name: 'Pump Y', type: 'centrifugal', serialNumber: 'SN-Y', clientId: testClient.id });
+
+      await request(app)
+        .delete(`/api/equipment/${eq.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+
+      const stillThere = await Equipment.findByPk(eq.id);
+      expect(stillThere).not.toBeNull();
+    });
+  });
 });

@@ -1,6 +1,8 @@
 const asyncHandler = require('express-async-handler');
+const { Op } = require('sequelize');
 const { Client, Equipment } = require('../models');
 const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
+const { isPrivileged, getUserId, getAssignedClientIds, canAccessClient } = require('../utils/ownership');
 
 const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -17,7 +19,15 @@ const createNotFoundError = (resource) => {
 const getClients = asyncHandler(async (req, res) => {
   const { page, limit, offset } = getPaginationParams(req.query);
 
+  // Ownership: el técnico solo ve clientes asignados.
+  const where = {};
+  if (!isPrivileged(req.user)) {
+    const assignedIds = await getAssignedClientIds(getUserId(req.user));
+    where.id = { [Op.in]: assignedIds };
+  }
+
   const { rows: clients, count: total } = await Client.findAndCountAll({
+    where,
     order: [['name', 'ASC']],
     limit,
     offset
@@ -36,7 +46,13 @@ const getClientById = asyncHandler(async (req, res) => {
   if (!validateUUID(id)) {
     throw createNotFoundError('Cliente');
   }
-  
+
+  if (!(await canAccessClient(req.user, id))) {
+    const error = new Error('No tienes permiso para acceder a este cliente');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const client = await Client.findByPk(id, {
     include: [{ model: Equipment, as: 'equipment' }]
   });

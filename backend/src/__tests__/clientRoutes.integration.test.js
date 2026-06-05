@@ -141,4 +141,73 @@ describe('Client Routes Integration Tests', () => {
       expect(response.body.success).toBe(false);
     });
   });
+
+  describe('Ownership / role restrictions', () => {
+    const { TechnicianClient } = require('../models');
+    let technician;
+    let technicianToken;
+
+    beforeAll(async () => {
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      technician = await User.create({
+        username: 'tech_cl',
+        email: 'tech_cl@example.com',
+        password: hashedPassword,
+        role: 'technician',
+        isActive: true
+      });
+      technicianToken = jwt.sign(
+        { userId: technician.id, email: technician.email, role: technician.role },
+        process.env.JWT_SECRET || 'test_secret_for_testing_only',
+        { expiresIn: '1d' }
+      );
+    });
+
+    beforeEach(async () => {
+      await TechnicianClient.destroy({ where: {} });
+    });
+
+    it('list returns only clients assigned to the technician', async () => {
+      const assigned = await Client.create({ name: 'Assigned Co', email: 'a@co.com', phone: '1', address: 'x' });
+      await Client.create({ name: 'Other Co', email: 'o@co.com', phone: '2', address: 'y' });
+      await TechnicianClient.create({ technicianId: technician.id, clientId: assigned.id });
+
+      const response = await request(app)
+        .get('/api/clients')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(200);
+
+      expect(response.body.data.length).toBe(1);
+      expect(response.body.data[0].id).toBe(assigned.id);
+    });
+
+    it('forbids a technician from reading an unassigned client', async () => {
+      const client = await Client.create({ name: 'Secret Co', email: 's@co.com', phone: '3', address: 'z' });
+
+      await request(app)
+        .get(`/api/clients/${client.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+    });
+
+    it('forbids a technician from creating a client', async () => {
+      await request(app)
+        .post('/api/clients')
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ name: 'Sneaky Co' })
+        .expect(403);
+    });
+
+    it('forbids a technician from deleting a client', async () => {
+      const client = await Client.create({ name: 'Keep Co', email: 'k@co.com', phone: '4', address: 'w' });
+
+      await request(app)
+        .delete(`/api/clients/${client.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+
+      const stillThere = await Client.findByPk(client.id);
+      expect(stillThere).not.toBeNull();
+    });
+  });
 });
