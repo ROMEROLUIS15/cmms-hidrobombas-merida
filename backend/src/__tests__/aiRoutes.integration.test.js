@@ -250,5 +250,13 @@ describe('AI Routes Integration Tests', () => {
 
       expect(response.body.success).toBe(false);
     });
+
+    it('should require auth for GET /api/ai/agent/tools', async () => {
+      const response = await request(app)
+        .get('/api/ai/agent/tools')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
   });
 });

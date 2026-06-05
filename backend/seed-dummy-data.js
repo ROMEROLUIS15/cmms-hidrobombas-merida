@@ -4,6 +4,17 @@ const { User, Client, Equipment, ServiceReport } = require('./src/models');
 
 const seedData = async () => {
   try {
+    // Guarda de seguridad: `sync({ force: true })` DROPea todas las tablas.
+    // Nunca debe ejecutarse contra producción. Requiere ALLOW_DESTRUCTIVE_SEED=true
+    // para forzarlo conscientemente fuera de desarrollo.
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+    if (isProduction && process.env.ALLOW_DESTRUCTIVE_SEED !== 'true') {
+      throw new Error(
+        '❌ Seed destructivo (force:true) bloqueado en producción. ' +
+        'Si realmente quieres BORRAR y recrear la base de datos, define ALLOW_DESTRUCTIVE_SEED=true.'
+      );
+    }
+
     console.log('🔄 Conectando a la base de datos...');
     await sequelize.authenticate();
 

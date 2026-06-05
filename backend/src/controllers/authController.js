@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const asyncHandler = require('express-async-handler');
 const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { setAuthCookies, clearAuthCookies } = require('../utils/cookie');
+const { revokeToken, isTokenRevoked } = require('../utils/tokenRevocation');
 
 /**
  * Registra un nuevo usuario en el sistema.
@@ -143,8 +144,18 @@ const getProfile = asyncHandler(async (req, res) => {
     });
 });
 
-// Logout - clear cookies
+// Logout - revoca el refresh token y limpia cookies
 const logout = asyncHandler(async (req, res) => {
+  const refreshTokenValue = req.cookies?.refreshToken;
+  if (refreshTokenValue) {
+    try {
+      const decoded = verifyRefreshToken(refreshTokenValue);
+      await revokeToken(decoded.jti, decoded.exp);
+    } catch {
+      // Token inválido/expirado: nada que revocar.
+    }
+  }
+
   clearAuthCookies(res);
   res.status(200).json({
     success: true,
@@ -166,6 +177,14 @@ const refreshToken = asyncHandler(async (req, res) => {
   try {
     const decoded = verifyRefreshToken(refreshTokenValue);
 
+    // Rechaza tokens ya revocados (logout previo o reutilización de uno rotado).
+    if (await isTokenRevoked(decoded.jti)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token has been revoked'
+      });
+    }
+
     const user = await User.findByPk(decoded.userId);
 
     if (!user || !user.isActive) {
@@ -174,6 +193,9 @@ const refreshToken = asyncHandler(async (req, res) => {
         message: 'Invalid refresh token'
       });
     }
+
+    // Rotación con revocación: el token usado deja de ser válido.
+    await revokeToken(decoded.jti, decoded.exp);
 
     const newToken = generateToken(user.id, user.email, user.role);
     const newRefreshToken = generateRefreshToken(user.id);

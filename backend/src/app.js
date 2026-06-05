@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
+const { correlationId, CORRELATION_HEADER } = require('./middleware/correlationId');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -43,8 +44,11 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key', 'X-Correlation-Id'],
 }));
+
+// Correlation ID (antes del logging para poder incluirlo en cada request)
+app.use(correlationId);
 
 // Body parsing middleware
 app.use(cookieParser());
@@ -54,10 +58,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Idempotency middleware
 app.use(idempotencyMiddleware);
 
-// Logging middleware (dev mode: concise colored output)
+// Logging middleware (dev mode: concise colored output + correlation id)
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  morgan.token('correlation-id', (req) => req.correlationId || '-');
+  app.use(morgan(':method :url :status :response-time ms - :correlation-id'));
 }
+
+// Exponer el header de correlación a clientes con CORS
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Expose-Headers', CORRELATION_HEADER);
+  next();
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -97,6 +108,20 @@ const apiLimiter = rateLimit({
   }
 });
 
+// Limiter más estricto para endpoints de IA: cada llamada consume tokens/costo
+// del LLM, por lo que se acota más que el resto de la API.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AI_RATE_LIMIT_MAX) || 30,
+  skip: isTestEnv,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiadas peticiones a los servicios de IA. Intenta de nuevo más tarde.'
+  }
+});
+
 // API routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
@@ -105,7 +130,7 @@ app.use('/api/service-reports', apiLimiter, serviceReportRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/assignments', apiLimiter, assignmentRoutes);
-app.use('/api/ai', apiLimiter, aiRoutes);
+app.use('/api/ai', aiLimiter, aiRoutes);
 
 // Health check routes (public, no auth required)
 app.use('/api/health', healthRoutes);

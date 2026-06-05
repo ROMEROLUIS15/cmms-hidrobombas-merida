@@ -1,6 +1,20 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET + '_refresh';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// En producción exigimos un secreto de refresh propio: derivarlo de JWT_SECRET
+// lo haría predecible a partir del secreto de acceso. Fuera de producción se
+// permite un fallback derivado para no romper el flujo de desarrollo/tests.
+if (isProduction && !process.env.REFRESH_TOKEN_SECRET) {
+  throw new Error(
+    'REFRESH_TOKEN_SECRET es obligatorio en producción. ' +
+    'Define una variable de entorno distinta de JWT_SECRET.'
+  );
+}
+
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || `${process.env.JWT_SECRET}_refresh`;
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 /**
@@ -19,13 +33,14 @@ const generateToken = (userId, email, role) => {
 };
 
 /**
- * Generate a refresh token for a user
+ * Generate a refresh token for a user.
+ * Incluye un `jti` único para poder revocarlo (denylist).
  * @param {number} userId - The user's ID
  * @returns {string} - The signed refresh token
  */
 const generateRefreshToken = (userId) => {
   return jwt.sign(
-    { userId, type: 'refresh' },
+    { userId, type: 'refresh', jti: crypto.randomUUID() },
     REFRESH_TOKEN_SECRET,
     { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
   );

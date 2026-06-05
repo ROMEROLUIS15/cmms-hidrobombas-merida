@@ -18,7 +18,8 @@ describe('Client Controller Unit Tests', () => {
   const validUUID = '123e4567-e89b-12d3-a456-426614174000';
 
   beforeEach(() => {
-    req = { params: {}, body: {}, query: {} };
+    // Usuario privilegiado por defecto: omite el filtrado por ownership.
+    req = { params: {}, body: {}, query: {}, user: { role: 'admin' } };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
