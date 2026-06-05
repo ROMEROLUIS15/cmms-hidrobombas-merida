@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
+const { correlationId, CORRELATION_HEADER } = require('./middleware/correlationId');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -43,8 +44,11 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key', 'X-Correlation-Id'],
 }));
+
+// Correlation ID (antes del logging para poder incluirlo en cada request)
+app.use(correlationId);
 
 // Body parsing middleware
 app.use(cookieParser());
@@ -54,10 +58,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Idempotency middleware
 app.use(idempotencyMiddleware);
 
-// Logging middleware (dev mode: concise colored output)
+// Logging middleware (dev mode: concise colored output + correlation id)
 if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  morgan.token('correlation-id', (req) => req.correlationId || '-');
+  app.use(morgan(':method :url :status :response-time ms - :correlation-id'));
 }
+
+// Exponer el header de correlación a clientes con CORS
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Expose-Headers', CORRELATION_HEADER);
+  next();
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {

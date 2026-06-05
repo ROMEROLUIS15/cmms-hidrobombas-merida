@@ -26,6 +26,12 @@ axios.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Correlation ID por request para trazar frontend↔backend en los logs.
+    const correlationId =
+      (globalThis.crypto && globalThis.crypto.randomUUID)
+        ? globalThis.crypto.randomUUID()
+        : `cid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    config.headers['X-Correlation-Id'] = correlationId;
     return config;
   },
   (error) => {

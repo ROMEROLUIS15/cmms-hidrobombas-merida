@@ -2,6 +2,7 @@ const app = require('./app');
 require('./models'); // Import models to ensure they are registered with Sequelize before sync
 const { initializeDatabase } = require('./config/database');
 const { startKeepAlive, stopKeepAlive } = require('./services/neonKeepAlive');
+const { logger } = require('./utils/logger');
 
 const PORT = process.env.PORT || 8001;
 
@@ -18,38 +19,36 @@ const startServer = async () => {
       await initializeDatabase();
     } else {
       app.listen(PORT, '0.0.0.0', () => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`🚀 Server ready [${process.env.NODE_ENV || 'development'}]`);
-        }
+        logger.info('Server ready', { port: PORT, env: process.env.NODE_ENV || 'development' });
       });
     }
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    logger.error('Failed to start server', { message: error.message });
     if (!process.env.VERCEL) process.exit(1);
   }
 };
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
+  logger.error('Unhandled Rejection', { reason: reason instanceof Error ? reason.message : String(reason) });
   if (!process.env.VERCEL) process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error.message);
+  logger.error('Uncaught Exception', { message: error.message });
   if (!process.env.VERCEL) process.exit(1);
 });
 
 // Graceful shutdown - detener keep-alive
 process.on('SIGTERM', () => {
-  console.warn('SIGTERM received. Shutting down gracefully...');
+  logger.info('SIGTERM received. Shutting down gracefully...');
   stopKeepAlive();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.warn('SIGINT received. Shutting down gracefully...');
+  logger.info('SIGINT received. Shutting down gracefully...');
   stopKeepAlive();
   process.exit(0);
 });
