@@ -97,6 +97,20 @@ const apiLimiter = rateLimit({
   }
 });
 
+// Limiter más estricto para endpoints de IA: cada llamada consume tokens/costo
+// del LLM, por lo que se acota más que el resto de la API.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AI_RATE_LIMIT_MAX) || 30,
+  skip: isTestEnv,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Demasiadas peticiones a los servicios de IA. Intenta de nuevo más tarde.'
+  }
+});
+
 // API routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/dashboard', apiLimiter, dashboardRoutes);
@@ -105,7 +119,7 @@ app.use('/api/service-reports', apiLimiter, serviceReportRoutes);
 app.use('/api/clients', apiLimiter, clientRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/assignments', apiLimiter, assignmentRoutes);
-app.use('/api/ai', apiLimiter, aiRoutes);
+app.use('/api/ai', aiLimiter, aiRoutes);
 
 // Health check routes (public, no auth required)
 app.use('/api/health', healthRoutes);

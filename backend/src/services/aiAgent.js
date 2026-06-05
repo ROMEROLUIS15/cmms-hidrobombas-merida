@@ -211,24 +211,31 @@ Respond ONLY with valid JSON.
   async getLLMDecision(prompt) {
     let response;
 
-    // Si es Groq
+    // Si es Groq — el SDK de Groq usa la API estilo OpenAI (chat.completions).
     if (this.llmClient.constructor.name === 'Groq') {
-      const message = await this.llmClient.messages.create({
-        model: 'mixtral-8x7b-32768',
+      const completion = await this.llmClient.chat.completions.create({
+        model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
         max_tokens: 1024,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [
+          { role: 'system', content: AGENT_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]
       });
-      response = message.content[0].text;
+      response = completion.choices?.[0]?.message?.content;
     }
-    // Si es Anthropic
+    // Si es Anthropic — API de Messages.
     else if (this.llmClient.constructor.name === 'Anthropic') {
       const message = await this.llmClient.messages.create({
-        model: 'claude-3-sonnet-20240229',
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5',
         max_tokens: 1024,
         system: AGENT_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }]
       });
       response = message.content[0].text;
+    }
+
+    if (!response) {
+      throw new Error('Empty LLM response');
     }
 
     // Parsear JSON

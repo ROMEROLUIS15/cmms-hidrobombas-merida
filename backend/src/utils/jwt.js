@@ -1,6 +1,19 @@
 const jwt = require('jsonwebtoken');
 
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET + '_refresh';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// En producción exigimos un secreto de refresh propio: derivarlo de JWT_SECRET
+// lo haría predecible a partir del secreto de acceso. Fuera de producción se
+// permite un fallback derivado para no romper el flujo de desarrollo/tests.
+if (isProduction && !process.env.REFRESH_TOKEN_SECRET) {
+  throw new Error(
+    'REFRESH_TOKEN_SECRET es obligatorio en producción. ' +
+    'Define una variable de entorno distinta de JWT_SECRET.'
+  );
+}
+
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || `${process.env.JWT_SECRET}_refresh`;
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 /**
