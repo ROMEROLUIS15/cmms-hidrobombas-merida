@@ -302,7 +302,7 @@ describe('AI Controller Unit Tests', () => {
           huggingface_configured: true,
           llm_provider: 'Groq (llama3-70b-8192)',
           embeddings_provider: 'HuggingFace (all-MiniLM-L6-v2)',
-          vector_store: 'MemoryVectorStore',
+          vector_store: 'MemoryVectorStore (en memoria)',
           langgraph_agents: ['assistantGraph', 'diagnosticGraph'],
         },
       });

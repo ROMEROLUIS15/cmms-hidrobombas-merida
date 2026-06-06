@@ -5,6 +5,14 @@ const {
   getOrCreateVectorStore,
   searchSimilarReports,
   clearVectorStore,
+  activeProviderName,
+  activeProviderLabel,
 } = require('./vectorStoreProvider');
 
-module.exports = { getOrCreateVectorStore, searchSimilarReports, clearVectorStore };
+module.exports = {
+  getOrCreateVectorStore,
+  searchSimilarReports,
+  clearVectorStore,
+  activeProviderName,
+  activeProviderLabel,
+};

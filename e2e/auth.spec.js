@@ -1,30 +1,41 @@
 const { test, expect } = require('@playwright/test');
 
-test.describe('Authentication E2E', () => {
-  const BACKEND_URL = 'http://localhost:8001';
+// Credenciales del admin activo sembrado en e2e/global-setup.cjs
+const E2E_EMAIL = 'e2e.admin@hidrobombas.test';
+const E2E_PASSWORD = 'E2ePass123!';
 
+test.describe('Authentication E2E', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
   });
 
   test('should load login page', async ({ page }) => {
-    await expect(page.locator('text=CMMS')).toBeVisible();
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hidrobombas Mérida' })).toBeVisible();
+    await expect(page.getByTestId('email-input')).toBeVisible();
+    await expect(page.getByTestId('password-input')).toBeVisible();
+    await expect(page.getByTestId('submit-button')).toBeVisible();
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
-    await page.fill('input[type="email"]', 'invalid@test.com');
-    await page.fill('input[type="password"]', 'wrongpassword');
-    await page.click('button[type="submit"]');
-    await expect(page.locator('text=Invalid email or password')).toBeVisible();
+    await page.getByTestId('email-input').fill('invalid@test.com');
+    await page.getByTestId('password-input').fill('wrongpassword');
+    const [resp] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/api/auth/login'), { timeout: 15000 }),
+      page.getByTestId('submit-button').click(),
+    ]);
+    expect(resp.status()).toBe(401);
+    // El login fallido muestra el error en el formulario y NO sale del login.
+    await expect(page.getByRole('alert').first()).toBeVisible({ timeout: 15000 });
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('should login with valid credentials', async ({ page }) => {
-    await page.fill('input[type="email"]', 'admin@hidrobombasmerida.com');
-    await page.fill('input[type="password"]', 'admin123');
-    await page.click('button[type="submit"]');
-    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
+    await page.getByTestId('email-input').fill(E2E_EMAIL);
+    await page.getByTestId('password-input').fill(E2E_PASSWORD);
+    await page.getByTestId('submit-button').click();
+    // Tras el login, la app redirige al dashboard y monta la navegacion.
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible({ timeout: 15000 });
   });
 });
 

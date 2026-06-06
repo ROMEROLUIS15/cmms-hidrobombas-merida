@@ -278,7 +278,7 @@ La lógica de ownership vive en `backend/src/utils/ownership.js` y se aplica en 
 
 ```bash
 # Backend (Jest + Supertest)
-cd backend && npm test                 # ~299 tests (unit + integración)
+cd backend && npm test                 # 322+ tests (unit + integración)
 cd backend && npm run test:coverage    # con cobertura
 
 # Frontend (Vitest + Testing Library)
