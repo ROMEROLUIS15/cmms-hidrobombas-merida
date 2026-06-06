@@ -1,57 +1,91 @@
 const { Resend } = require('resend');
 const { logger } = require('../utils/logger');
 
-// Remitente verificado en Resend (formato "Nombre <correo@dominio>" o solo correo).
-const FROM = process.env.RESEND_FROM_EMAIL || 'CMMS Hidrobombas <onboarding@resend.dev>';
-
 /**
- * Devuelve un cliente Resend, o null si no hay API key (modo simulado).
- * @returns {import('resend').Resend|null}
+ * Servicio de email con soporte de varios proveedores (gratis, sin dominio propio):
+ *   1. Brevo  — si BREVO_API_KEY está definida (API HTTP, remitente verificado).
+ *   2. Resend — si RESEND_API_KEY está definida (requiere dominio para terceros).
+ *   3. Simulado — si no hay ninguna key (tests/CI no envían correos reales).
+ * Las tres rutas devuelven el mismo contrato:
+ *   { simulated:true } | { success:true, messageId? } | { success:false, error }
  */
-const getClient = () => {
-  if (!process.env.RESEND_API_KEY) return null;
-  return new Resend(process.env.RESEND_API_KEY);
-};
 
 /**
- * En desarrollo, RESEND_DEV_OVERRIDE_TO redirige TODOS los correos a una
- * dirección de prueba para no enviar a clientes reales mientras se prueba.
+ * En desarrollo, *_DEV_OVERRIDE_TO redirige TODOS los correos a una dirección de
+ * prueba para no enviar a clientes reales mientras se prueba.
  * @param {string} to
  * @returns {string}
  */
-const resolveTo = (to) => process.env.RESEND_DEV_OVERRIDE_TO || to;
+const resolveTo = (to) =>
+  process.env.EMAIL_DEV_OVERRIDE_TO || process.env.RESEND_DEV_OVERRIDE_TO || to;
+
+/** Envío vía Brevo (Transactional Email API). */
+const sendViaBrevo = async ({ to, subject, html }) => {
+  const sender = {
+    email: process.env.BREVO_SENDER_EMAIL,
+    name: process.env.BREVO_SENDER_NAME || 'CMMS Hidrobombas Mérida',
+  };
+
+  const resp = await globalThis.fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({ sender, to: [{ email: to }], subject, htmlContent: html }),
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    return { success: false, error: data.message || `Brevo HTTP ${resp.status}` };
+  }
+  return { success: true, messageId: data.messageId };
+};
+
+/** Envío vía Resend. */
+const sendViaResend = async ({ to, subject, html }) => {
+  const from = process.env.RESEND_FROM_EMAIL || 'CMMS Hidrobombas <onboarding@resend.dev>';
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { data, error } = await resend.emails.send({ from, to, subject, html });
+  if (error) {
+    return { success: false, error: error.message || JSON.stringify(error) };
+  }
+  return { success: true, messageId: data?.id };
+};
 
 /**
- * Envía un correo vía Resend y normaliza el resultado.
+ * Envía un correo con el proveedor configurado y normaliza el resultado.
  * @param {{ to: string, subject: string, html: string, kind: string }} params
- * @returns {Promise<{simulated:true}|{success:true,messageId?:string}|{success:false,error:string}>}
  */
 const send = async ({ to, subject, html, kind }) => {
-  const resend = getClient();
+  const hasBrevo = !!process.env.BREVO_API_KEY;
+  const hasResend = !!process.env.RESEND_API_KEY;
 
-  if (!resend) {
-    logger.warn(`RESEND_API_KEY no configurada; simulando ${kind}`, { to });
+  if (!hasBrevo && !hasResend) {
+    logger.warn(`Sin proveedor de email configurado; simulando ${kind}`, { to });
     return { simulated: true };
   }
 
   const recipient = resolveTo(to);
   if (recipient !== to) {
-    logger.info('Email redirigido por RESEND_DEV_OVERRIDE_TO', { original: to, recipient });
+    logger.info('Email redirigido por DEV_OVERRIDE_TO', { original: to, recipient });
   }
 
+  const provider = hasBrevo ? 'brevo' : 'resend';
   try {
-    const { data, error } = await resend.emails.send({ from: FROM, to: recipient, subject, html });
+    const result = hasBrevo
+      ? await sendViaBrevo({ to: recipient, subject, html })
+      : await sendViaResend({ to: recipient, subject, html });
 
-    if (error) {
-      const message = error.message || JSON.stringify(error);
-      logger.error(`Error enviando ${kind}`, { message });
-      return { success: false, error: message };
+    if (result.success) {
+      logger.info(`${kind} enviado`, { provider, messageId: result.messageId, to: recipient });
+    } else {
+      logger.error(`Error enviando ${kind}`, { provider, message: result.error });
     }
-
-    logger.info(`${kind} enviado`, { messageId: data?.id, to: recipient });
-    return { success: true, messageId: data?.id };
+    return result;
   } catch (err) {
-    logger.error(`Error enviando ${kind}`, { message: err.message });
+    logger.error(`Error enviando ${kind}`, { provider, message: err.message });
     return { success: false, error: err.message };
   }
 };

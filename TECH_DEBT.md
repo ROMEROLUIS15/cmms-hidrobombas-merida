@@ -24,13 +24,17 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 
 ---
 
-## 2. Email — migrado a Resend; falta verificar dominio para enviar a clientes
+## 2. Email — multi-proveedor (Brevo / Resend / simulado); falta configurar la key
 
-**Estado (2026-06-06):** `emailService.js` migrado de nodemailer/SMTP a **Resend**. Verificado en vivo: envío real **exitoso** (Resend devolvió `messageId`) a la dirección dueña de la cuenta. Contrato de retorno intacto (`{simulated}` / `{success, messageId}` / `{success:false, error}`), por lo que `pdfController` y `passwordController` siguen funcionando. Si `RESEND_API_KEY` no está en el entorno, el envío se **simula** (no falla) — así los tests y CI no envían correos.
+**Estado (2026-06-06):** `emailService.js` migrado de nodemailer/SMTP a un servicio **multi-proveedor** que elige según la key presente: **Brevo** (elegido) → Resend → simulado. Contrato de retorno intacto (`{simulated}` / `{success, messageId}` / `{success:false, error}`), por lo que `pdfController` y `passwordController` no cambian. Sin ninguna key, **simula** (no falla) — tests/CI no envían.
+
+**Por qué Brevo:** gratis (300 emails/día), **no exige dominio propio** — basta verificar un remitente (tu correo). Resend quedó como fallback pero requiere verificar un dominio para enviar a terceros (en modo test solo envía al dueño de la cuenta; verificado en vivo que el envío funciona).
 
 **Pendiente de configuración (NO es código):**
-- `RESEND_DEV_OVERRIDE_TO` está como `tu_email@gmail.com` (placeholder). Ponerlo en una dirección real para pruebas, o vaciarlo en producción.
-- La cuenta Resend está en **modo test**: con el remitente `onboarding@resend.dev` solo se puede enviar al correo dueño de la cuenta (`romeroluis.dev@gmail.com`). Para enviar a **clientes reales** hay que **verificar un dominio** en `resend.com/domains` y poner `RESEND_FROM_EMAIL` con ese dominio (ej. `Hidrobombas <reportes@tudominio.com>`).
+- Crear cuenta en brevo.com, **verificar el remitente** (Senders) y generar **API key**.
+- Setear en el `.env` (y en Vercel): `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (el correo verificado), opcional `BREVO_SENDER_NAME`.
+- Opcional dev: `EMAIL_DEV_OVERRIDE_TO` para redirigir todos los correos a una dirección de prueba.
+- Falta la **verificación en vivo con Brevo** (no se hizo porque aún no hay `BREVO_API_KEY`); con Resend sí se verificó envío real.
 
 **Limpieza menor:** `nodemailer` quedó como dependencia sin uso; quitarla en un cambio aparte (evitar churn del lockfile — ver item 3).
 
