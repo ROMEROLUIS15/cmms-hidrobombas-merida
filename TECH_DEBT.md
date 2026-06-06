@@ -24,19 +24,19 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 
 ---
 
-## 2. Email — multi-proveedor (Brevo / Resend / simulado); falta configurar la key
+## 2. Email — multi-proveedor (SMTP / Brevo / Resend / simulado); falta configurar credenciales
 
-**Estado (2026-06-06):** `emailService.js` migrado de nodemailer/SMTP a un servicio **multi-proveedor** que elige según la key presente: **Brevo** (elegido) → Resend → simulado. Contrato de retorno intacto (`{simulated}` / `{success, messageId}` / `{success:false, error}`), por lo que `pdfController` y `passwordController` no cambian. Sin ninguna key, **simula** (no falla) — tests/CI no envían.
+**Estado (2026-06-06):** `emailService.js` es un servicio **multi-proveedor** que elige según lo configurado: **SMTP** (elegido) → Brevo → Resend → simulado. Contrato de retorno intacto (`{simulated}` / `{success, messageId}` / `{success:false, error}`), por lo que `pdfController` y `passwordController` no cambian. Sin ninguna config, **simula** (no falla) — tests/CI no envían.
 
-**Por qué Brevo:** gratis (300 emails/día), **no exige dominio propio** — basta verificar un remitente (tu correo). Resend quedó como fallback pero requiere verificar un dominio para enviar a terceros (en modo test solo envía al dueño de la cuenta; verificado en vivo que el envío funciona).
+**Por qué SMTP (Gmail):** gratis, **sin dominio y sin registro nuevo** (usa una cuenta Gmail existente). Razón del cambio: **Brevo no se pudo usar** (bloquea el registro desde Venezuela y exige verificación por SMS que no llega a un número de Colombia). SendGrid/Twilio tienen el mismo problema de teléfono. Resend funciona (verificado envío real) pero sin dominio solo envía al dueño de la cuenta. Gmail SMTP no está geo-bloqueado y envía a cualquier destinatario (~500/día).
 
 **Pendiente de configuración (NO es código):**
-- Crear cuenta en brevo.com, **verificar el remitente** (Senders) y generar **API key**.
-- Setear en el `.env` (y en Vercel): `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (el correo verificado), opcional `BREVO_SENDER_NAME`.
+- En la cuenta Gmail: activar **verificación en 2 pasos** y generar una **App Password** (`myaccount.google.com/apppasswords`).
+- Setear en `.env` (y en Vercel): `SMTP_USER` (el gmail), `SMTP_PASS` (la App Password de 16 caracteres), `SMTP_FROM`.
 - Opcional dev: `EMAIL_DEV_OVERRIDE_TO` para redirigir todos los correos a una dirección de prueba.
-- Falta la **verificación en vivo con Brevo** (no se hizo porque aún no hay `BREVO_API_KEY`); con Resend sí se verificó envío real.
+- Falta la **verificación en vivo con SMTP** (no se hizo porque aún no hay App Password en el `.env`); con Resend sí se verificó envío real.
 
-**Limpieza menor:** `nodemailer` quedó como dependencia sin uso; quitarla en un cambio aparte (evitar churn del lockfile — ver item 3).
+**Limpieza menor:** ahora `nodemailer` SÍ se usa (proveedor SMTP). Si en el futuro se fija un único proveedor, eliminar los no usados (`resend` y/o `nodemailer`) en un cambio aparte (evitar churn del lockfile — ver item 3).
 
 ---
 

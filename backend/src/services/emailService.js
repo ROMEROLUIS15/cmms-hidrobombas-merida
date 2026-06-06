@@ -1,12 +1,14 @@
+const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const { logger } = require('../utils/logger');
 
 /**
  * Servicio de email con soporte de varios proveedores (gratis, sin dominio propio):
- *   1. Brevo  — si BREVO_API_KEY está definida (API HTTP, remitente verificado).
- *   2. Resend — si RESEND_API_KEY está definida (requiere dominio para terceros).
- *   3. Simulado — si no hay ninguna key (tests/CI no envían correos reales).
- * Las tres rutas devuelven el mismo contrato:
+ *   1. SMTP   — si SMTP_USER y SMTP_PASS están definidas (p. ej. Gmail + App Password).
+ *   2. Brevo  — si BREVO_API_KEY está definida (API HTTP, remitente verificado).
+ *   3. Resend — si RESEND_API_KEY está definida (requiere dominio para terceros).
+ *   4. Simulado — si no hay ninguna config (tests/CI no envían correos reales).
+ * Todas las rutas devuelven el mismo contrato:
  *   { simulated:true } | { success:true, messageId? } | { success:false, error }
  */
 
@@ -18,6 +20,19 @@ const { logger } = require('../utils/logger');
  */
 const resolveTo = (to) =>
   process.env.EMAIL_DEV_OVERRIDE_TO || process.env.RESEND_DEV_OVERRIDE_TO || to;
+
+/** Envío vía SMTP (nodemailer); ideal con Gmail + App Password (gratis, sin dominio). */
+const sendViaSMTP = async ({ to, subject, html }) => {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const info = await transporter.sendMail({ from, to, subject, html });
+  return { success: true, messageId: info.messageId };
+};
 
 /** Envío vía Brevo (Transactional Email API). */
 const sendViaBrevo = async ({ to, subject, html }) => {
@@ -59,10 +74,11 @@ const sendViaResend = async ({ to, subject, html }) => {
  * @param {{ to: string, subject: string, html: string, kind: string }} params
  */
 const send = async ({ to, subject, html, kind }) => {
+  const hasSMTP = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   const hasBrevo = !!process.env.BREVO_API_KEY;
   const hasResend = !!process.env.RESEND_API_KEY;
 
-  if (!hasBrevo && !hasResend) {
+  if (!hasSMTP && !hasBrevo && !hasResend) {
     logger.warn(`Sin proveedor de email configurado; simulando ${kind}`, { to });
     return { simulated: true };
   }
@@ -72,11 +88,13 @@ const send = async ({ to, subject, html, kind }) => {
     logger.info('Email redirigido por DEV_OVERRIDE_TO', { original: to, recipient });
   }
 
-  const provider = hasBrevo ? 'brevo' : 'resend';
+  const provider = hasSMTP ? 'smtp' : hasBrevo ? 'brevo' : 'resend';
   try {
-    const result = hasBrevo
-      ? await sendViaBrevo({ to: recipient, subject, html })
-      : await sendViaResend({ to: recipient, subject, html });
+    const result = hasSMTP
+      ? await sendViaSMTP({ to: recipient, subject, html })
+      : hasBrevo
+        ? await sendViaBrevo({ to: recipient, subject, html })
+        : await sendViaResend({ to: recipient, subject, html });
 
     if (result.success) {
       logger.info(`${kind} enviado`, { provider, messageId: result.messageId, to: recipient });
