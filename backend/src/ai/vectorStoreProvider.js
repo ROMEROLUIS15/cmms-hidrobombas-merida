@@ -186,6 +186,7 @@ const providerEnv = (process.env.VECTOR_STORE_PROVIDER || 'memory').toLowerCase(
 
 /** @type {VectorStoreProvider} */
 let activeProvider = providers[providerEnv];
+let activeProviderName = providerEnv;
 
 if (!activeProvider) {
   logger.warn('VECTOR_STORE_PROVIDER inválido; usando "memory"', {
@@ -193,7 +194,13 @@ if (!activeProvider) {
     supported: ['memory', 'pgvector'],
   });
   activeProvider = providers.memory;
+  activeProviderName = 'memory';
 }
+
+const PROVIDER_LABELS = {
+  memory: 'MemoryVectorStore (en memoria)',
+  pgvector: `PGVectorStore (PostgreSQL/pgvector, tabla "${PGVECTOR_TABLE}")`,
+};
 
 module.exports = {
   getOrCreateVectorStore: () => activeProvider.getOrCreateStore(),
@@ -202,4 +209,6 @@ module.exports = {
   providers,
   formatReportForEmbedding,
   loadReports,
+  activeProviderName,
+  activeProviderLabel: PROVIDER_LABELS[activeProviderName] || activeProviderName,
 };

@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { askQuestion, diagnose, chat, reindexReports } = require('../ai');
 const { streamChat, streamQuestion } = require('../ai/streaming');
+const { activeProviderLabel } = require('../ai/vectorStore');
 
 const aiAsk = asyncHandler(async (req, res) => {
   const { question } = req.body;
@@ -71,7 +72,7 @@ const aiStatus = asyncHandler(async (req, res) => {
       huggingface_configured: hasHuggingFace,
       llm_provider: 'Groq (llama3-70b-8192)',
       embeddings_provider: 'HuggingFace (all-MiniLM-L6-v2)',
-      vector_store: 'MemoryVectorStore',
+      vector_store: activeProviderLabel,
       langgraph_agents: ['assistantGraph', 'diagnosticGraph'],
     },
   });
