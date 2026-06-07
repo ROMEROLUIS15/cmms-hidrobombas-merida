@@ -1,564 +1,192 @@
-# 🔌 Agent Maestro - API Endpoints Reference
+# API — Endpoints de IA
 
-## 📊 Resumen Rápido
-
-| Endpoint | Método | Auth | Función |
-|----------|--------|------|---------|
-| `/api/ai/agent/tools` | GET | ✅ | Listar 6 herramientas disponibles |
-| `/api/ai/agent/ask` | POST | ✅ | Interface principal (cualquier solicitud) |
-| `/api/ai/agent/report` | POST | ✅ | Generar reporte profesional |
-| `/api/ai/agent/anomaly` | POST | ✅ | Detectar anomalías |
-| `/api/ai/agent/question` | POST | ✅ | Hacer preguntas sobre equipo |
-| `/api/ai/agent/maintenance` | POST | ✅ | Recomendar próximo mantenimiento |
-| `/api/ai/agent/summary` | POST | ✅ | Resumen ejecutivo del período |
+Endpoints bajo `/api/ai/*`. Todos requieren autenticación JWT (`Authorization: Bearer <token>`).
 
 ---
 
-## 🌐 Endpoint 1: GET /api/ai/agent/tools
-**Requiere autenticación** - Lista todas las herramientas disponibles
+## GET /api/ai/status
 
-### Request
+Estado del servicio de IA: proveedor LLM, embeddings, vector store.
+
 ```http
-GET /api/ai/agent/tools HTTP/1.1
-Host: localhost:5000
+GET /api/ai/status HTTP/1.1
 Authorization: Bearer <JWT>
 ```
 
-### Response (200 OK)
+**Response (200):**
+
 ```json
 {
   "success": true,
-  "count": 6,
-  "tools": [
-    {
-      "name": "generate_report",
-      "description": "Genera un reporte profesional de mantenimiento basado en datos técnicos"
-    },
-    {
-      "name": "ask_equipment",
-      "description": "Responde preguntas técnicas sobre equipos basándose en historial"
-    },
-    {
-      "name": "detect_anomaly",
-      "description": "Detecta anomalías comparando datos actuales vs histórico"
-    },
-    {
-      "name": "recommend_maintenance",
-      "description": "Recomienda próxima fecha de mantenimiento preventivo"
-    },
-    {
-      "name": "compare_equipment",
-      "description": "Compara performance entre dos equipos"
-    },
-    {
-      "name": "create_summary",
-      "description": "Crea resumen ejecutivo del período"
-    }
-  ]
-}
-```
-
-### Ejemplo cURL
-```bash
-curl -X GET http://localhost:5000/api/ai/agent/tools
-```
-
----
-
-## 🌐 Endpoint 2: POST /api/ai/agent/ask
-**Protegida** - Interface principal del Agent (acepta cualquier solicitud natural)
-
-### Request
-```http
-POST /api/ai/agent/ask HTTP/1.1
-Host: localhost:5000
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-Content-Type: application/json
-
-{
-  "request": "Generate a professional maintenance report for service 12345",
-  "context": {
-    "serviceReportId": "12345"
+  "data": {
+    "groq_configured": true,
+    "huggingface_configured": true,
+    "llm_provider": "Groq (llama3-70b-8192)",
+    "embeddings_provider": "HuggingFace (all-MiniLM-L6-v2)",
+    "vector_store": "memory",
+    "langgraph_agents": ["assistantGraph", "diagnosticGraph"]
   }
 }
 ```
 
-### Response (200 OK)
-```json
-{
-  "success": true,
-  "toolUsed": "generate_report",
-  "result": {
-    "description": "El equipo bomba centrífuga modelo XYZ-2000 ha operado dentro de parámetros normales durante este servicio...",
-    "recommendations": [
-      "Inspeccionar sello mecánico en próximo servicio",
-      "Revisar alineación del acople",
-      "Cambiar aceite del rodamiento"
-    ],
-    "estimatedCost": "$150-200",
-    "nextServiceDate": "2024-07-15"
-  },
-  "executionTime": "2.3s",
-  "timestamp": "2024-06-01T10:30:45Z"
-}
-```
-
-### Parámetros
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `request` | string | ✅ Sí | Solicitud en lenguaje natural (ej: "Generate a report") |
-| `context` | object | ❌ No | Contexto adicional (IDs de recursos) |
-| `context.serviceReportId` | string | Depende | ID del reporte de servicio (para reportes) |
-| `context.equipmentId` | string | Depende | ID del equipo (para preguntas) |
-
-### Ejemplo cURL
-```bash
-curl -X POST http://localhost:5000/api/ai/agent/ask \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "request": "Generate a maintenance report",
-    "context": {"serviceReportId": "12345"}
-  }'
-```
-
 ---
 
-## 🌐 Endpoint 3: POST /api/ai/agent/report
-**Protegida** - Generar reporte profesional (atajo directo)
+## POST /api/ai/ask
 
-### Request
+Consulta RAG sobre el historial de reportes de servicio. El LLM responde basándose en los reportes indexados en el vector store.
+
 ```http
-POST /api/ai/agent/report HTTP/1.1
-Host: localhost:5000
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+POST /api/ai/ask HTTP/1.1
+Authorization: Bearer <JWT>
 Content-Type: application/json
 
-{
-  "serviceReportId": "12345"
-}
+{ "question": "¿Qué equipos han tenido problemas de sobrecalentamiento?" }
 ```
 
-### Response (200 OK)
+**Response (200):**
+
 ```json
 {
   "success": true,
-  "toolUsed": "generate_report",
-  "result": {
-    "description": "Reporte profesional generado por IA...",
-    "recommendations": [...],
-    "estimatedCost": "$150-200",
-    "nextServiceDate": "2024-07-15"
+  "data": {
+    "answer": "Respuesta generada por IA basada en los reportes..."
   }
 }
 ```
 
-### Flujo Interno
-```
-1. Controller valida serviceReportId
-2. Llama agent.invoke("Generate a professional maintenance report", { serviceReportId })
-3. Agent decide usar generateReportTool
-4. Tool carga ServiceReport + últimos 6 meses
-5. LLM Groq analiza datos + crea reporte
-6. Retorna JSON con estructura profesional
-```
-
-### Ejemplo cURL
-```bash
-curl -X POST http://localhost:5000/api/ai/agent/report \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"serviceReportId": "12345"}'
-```
-
 ---
 
-## 🌐 Endpoint 4: POST /api/ai/agent/anomaly
-**Protegida** - Detectar anomalías en servicio
+## POST /api/ai/chat
 
-### Request
+Chat con el asistente LangGraph (Agent Maestro). Usa herramientas dinámicas para consultar BD.
+
 ```http
-POST /api/ai/agent/anomaly HTTP/1.1
-Authorization: Bearer TOKEN
+POST /api/ai/chat HTTP/1.1
+Authorization: Bearer <JWT>
 Content-Type: application/json
 
-{
-  "serviceReportId": "12345"
-}
+{ "message": "Dame información del equipo ABC-123" }
 ```
 
-### Response (200 OK)
+**Response (200):**
+
 ```json
 {
   "success": true,
-  "toolUsed": "detect_anomaly",
-  "result": {
-    "anomaliesDetected": true,
-    "anomalies": [
-      {
-        "parameter": "temperature",
-        "currentValue": 85,
-        "historicalAverage": 72,
-        "deviation": "+13°C",
-        "severity": "high",
-        "explanation": "Temperature is 13°C above normal. May indicate bearing wear or insufficient lubrication."
-      },
-      {
-        "parameter": "vibration",
-        "currentValue": 4.2,
-        "historicalAverage": 2.1,
-        "deviation": "+2.1 mm/s",
-        "severity": "medium",
-        "explanation": "Slight increase in vibration levels. Monitor closely."
-      }
-    ],
-    "overallSeverity": "high",
-    "recommendation": "Schedule urgent maintenance within 48 hours"
+  "data": {
+    "response": "Respuesta del asistente..."
   }
 }
 ```
 
-### Lógica
-```
-1. Carga ServiceReport actual
-2. Obtiene promedio histórico (6 meses)
-3. Compara: current vs average
-4. LLM detecta patrones anómalos
-5. Retorna severidad + recomendaciones
-```
-
-### Ejemplo cURL
-```bash
-curl -X POST http://localhost:5000/api/ai/agent/anomaly \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"serviceReportId": "12345"}'
-```
-
 ---
 
-## 🌐 Endpoint 5: POST /api/ai/agent/question
-**Protegida** - Hacer preguntas sobre historial de equipo
+## POST /api/ai/diagnose
 
-### Request
+Diagnóstico basado en síntomas descritos. Opcionalmente recibe `equipment_id` o `equipment_name`.
+
 ```http
-POST /api/ai/agent/question HTTP/1.1
-Authorization: Bearer TOKEN
+POST /api/ai/diagnose HTTP/1.1
+Authorization: Bearer <JWT>
 Content-Type: application/json
 
 {
-  "equipmentId": "pump-001",
-  "question": "What is the maintenance history of this equipment?"
+  "symptoms": "El motor hace ruido y vibra al arrancar",
+  "equipment_id": "uuid-del-equipo"
 }
 ```
 
-### Response (200 OK)
+**Response (200):**
+
 ```json
 {
   "success": true,
-  "toolUsed": "ask_equipment",
-  "result": {
-    "answer": "This pump has been in service since 2022. It has undergone 12 maintenance cycles with an average interval of 3 months. Most common issues: bearing wear (5 times), seal replacement (3 times), lubrication maintenance (12 times). Overall reliability: 94%. Last service: 2024-05-15.",
-    "confidence": 0.92,
-    "sourceData": {
-      "totalServices": 12,
-      "averageInterval": "3 months",
-      "commonIssues": ["bearing_wear", "seal_replacement", "lubrication"],
-      "lastService": "2024-05-15",
-      "reliability": "94%"
-    }
+  "data": {
+    "diagnosis": "...",
+    "recommendations": "...",
+    "followUpQuestion": "..."
   }
 }
 ```
 
-### Parámetros
-| Campo | Tipo | Requerido | Ejemplo |
-|-------|------|-----------|---------|
-| `equipmentId` | string | ✅ | "pump-001" |
-| `question` | string | ✅ | "Has this equipment ever overheated?" |
-
-### Preguntas Ejemplo
-- "What is the maintenance history?"
-- "Has this equipment had problems with the motor?"
-- "When was the last major repair?"
-- "What is the average downtime?"
-- "Is this equipment reliable?"
-
-### Ejemplo cURL
-```bash
-curl -X POST http://localhost:5000/api/ai/agent/question \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "equipmentId": "pump-001",
-    "question": "Has this equipment ever overheated?"
-  }'
-```
-
 ---
 
-## 🌐 Endpoint 6: POST /api/ai/agent/maintenance
-**Protegida** - Recomendar próximo mantenimiento
+## POST /api/ai/reindex
 
-### Request
+Reconstruye el vector store desde cero (borra y reindexa todos los reportes).
+
 ```http
-POST /api/ai/agent/maintenance HTTP/1.1
-Authorization: Bearer TOKEN
-Content-Type: application/json
-
-{
-  "equipmentId": "pump-001"
-}
+POST /api/ai/reindex HTTP/1.1
+Authorization: Bearer <JWT>
 ```
 
-### Response (200 OK)
+**Response (200):**
+
 ```json
 {
   "success": true,
-  "toolUsed": "recommend_maintenance",
-  "result": {
-    "recommendedDate": "2024-06-15",
-    "urgency": "high",
-    "daysUntilExpected": 14,
-    "reason": "Based on 12-month trend analysis, this equipment shows progressive increase in bearing wear. Historical pattern suggests maintenance is due around mid-June.",
-    "preventiveActions": [
-      "Oil change (full)",
-      "Bearing inspection and replacement if needed",
-      "Seal check and replacement",
-      "Alignment verification"
-    ],
-    "estimatedDowntime": "2-4 hours",
-    "estimatedCost": "$200-300",
-    "riskIfDelayed": "High - Risk of bearing failure and consequent major damage"
-  }
+  "message": "Reportes reindexados correctamente en el vector store."
 }
-```
-
-### Flujo de Análisis
-```
-1. Carga Equipment + 12 meses de historial
-2. Analiza tendencias:
-   - Intervalos entre servicios
-   - Tipos de fallos
-   - Frecuencia de problemas
-3. LLM predice próxima fecha
-4. Retorna: fecha, urgencia, acciones preventivas
-```
-
-### Ejemplo cURL
-```bash
-curl -X POST http://localhost:5000/api/ai/agent/maintenance \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"equipmentId": "pump-001"}'
 ```
 
 ---
 
-## 🌐 Endpoint 7: POST /api/ai/agent/summary
-**Protegida** - Resumen ejecutivo del período
+## POST /api/ai/stream-chat · POST /api/ai/stream-ask
 
-### Request
+Versiones SSE (Server-Sent Events) de `chat` y `ask`. Emiten tokens conforme se generan.
+
 ```http
-POST /api/ai/agent/summary HTTP/1.1
-Authorization: Bearer TOKEN
+POST /api/ai/stream-chat HTTP/1.1
+Authorization: Bearer <JWT>
 Content-Type: application/json
 
-{
-  "period": "month"
-}
+{ "message": "¿Qué dice el historial?" }
 ```
 
-### Response (200 OK)
-```json
-{
-  "success": true,
-  "toolUsed": "create_summary",
-  "result": {
-    "period": "June 2024",
-    "totalEquipmentMaintained": 45,
-    "totalServices": 67,
-    "totalDowntime": "156 hours",
-    "totalCost": "$18,500",
-    "averageTimePerService": "2.3 hours",
-    "kpis": {
-      "equipmentAvailability": "96.2%",
-      "maintenanceCompliance": "99.1%",
-      "serviceOnTimeRate": "98.5%",
-      "costPerService": "$276",
-      "preventiveToReactiveRatio": "75/25"
-    },
-    "topIssues": [
-      {
-        "issue": "Bearing wear",
-        "count": 12,
-        "percentage": "18%"
-      },
-      {
-        "issue": "Seal replacement",
-        "count": 8,
-        "percentage": "12%"
-      },
-      {
-        "issue": "Lubrication maintenance",
-        "count": 7,
-        "percentage": "10%"
-      }
-    ],
-    "recommendations": [
-      "Implement preventive bearing inspection program",
-      "Schedule bulk seal replacements",
-      "Increase lubrication maintenance frequency"
-    ],
-    "trend": "Performance improving. Equipment availability up 2% from last month."
-  }
-}
+**Response (SSE stream):**
+
+```
+data: {"token":"Respuesta "}
+data: {"token":"generada "}
+data: {"token":"token "}
+data: {"token":"por "}
+data: {"token":"token..."}
+data: {"done":true}
 ```
 
-### Parámetro Periodo
-| Valor | Descripción |
-|-------|-------------|
-| `month` | Último mes completo |
-| `quarter` | Último trimestre |
-| `year` | Último año completo |
+---
 
-### Ejemplo cURL
+## Herramientas del agente (LangChain Dynamic Tools)
+
+| Nombre | Descripción |
+|--------|-------------|
+| `get_equipment_info` | Información detallada de un equipo por ID, nombre o serie |
+| `get_client_history` | Historial completo de cliente con equipos y reportes |
+| `get_recent_reports_by_equipment` | Últimos 10 reportes de un equipo |
+| `search_reports_by_text` | Búsqueda textual en observaciones/recomendaciones |
+
+---
+
+## Rate Limiting
+
+- `/api/ai/*`: 30 requests por ventana de 15 minutos (configurable vía `AI_RATE_LIMIT_MAX`).
+
+---
+
+## Autenticación
+
 ```bash
-curl -X POST http://localhost:5000/api/ai/agent/summary \
-  -H "Authorization: Bearer TOKEN" \
+curl -X POST http://localhost:8001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"period": "month"}'
-```
+  -d '{"email": "user@example.com", "password": "pass123"}'
 
----
-
-## 🔐 Autenticación
-
-Todos los endpoints protegidos requieren token JWT en el header:
-
-```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-### Obtener Token
-```bash
-# 1. Registrarse
-curl -X POST http://localhost:5000/api/auth/register \
+# Usar el token devuelto:
+curl -X POST http://localhost:8001/api/ai/ask \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123",
-    "name": "John Doe"
-  }'
-
-# 2. Login
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-
-# Response contiene:
-# {
-#   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-#   "user": { ... }
-# }
+  -d '{"question": "¿Cuántos reportes hay del equipo X?"}'
 ```
 
 ---
 
-## ⚠️ Errores Posibles
-
-### 400 Bad Request
-```json
-{
-  "success": false,
-  "error": "serviceReportId required"
-}
-```
-
-### 401 Unauthorized
-```json
-{
-  "success": false,
-  "error": "No token provided"
-}
-```
-
-### 403 Forbidden
-```json
-{
-  "success": false,
-  "error": "Invalid token"
-}
-```
-
-### 500 Internal Server Error
-```json
-{
-  "success": false,
-  "error": "Error message from server"
-}
-```
-
----
-
-## 📊 Response Structure
-
-Todos los endpoints retornan esta estructura:
-
-```typescript
-{
-  success: boolean,           // true si OK, false si error
-  toolUsed?: string,          // nombre de la tool usada
-  result?: object,            // datos retornados
-  executionTime?: string,     // tiempo de ejecución
-  error?: string,             // mensaje de error (si aplica)
-  timestamp?: string          // ISO 8601 timestamp
-}
-```
-
----
-
-## 🚦 Rate Limiting
-
-- **Groq API**: 30 requests/minute (free tier)
-- **Local**: Sin límite
-- **Recomendación**: Implementar rate limiting en frontend
-
-```javascript
-// Ejemplo: máximo 5 solicitudes por minuto por usuario
-const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 5 // 5 requests
-});
-```
-
----
-
-## 📈 Performance
-
-| Métrica | Valor |
-|---------|-------|
-| Tiempo respuesta p50 | 2-3s |
-| Tiempo respuesta p95 | 4-5s |
-| Máximo simultáneos | 5 |
-| Memoria por request | ~50MB |
-| DB queries | 2-5 por request |
-
----
-
-## 🔗 Rutas Relacionadas
-
-- **Auth**: `/api/auth/*` (login, register, logout)
-- **Health**: `/api/health` (status del servidor)
-- **Service Reports**: `/api/service-reports` (CRUD)
-- **Equipment**: `/api/equipment` (CRUD)
-- **Clients**: `/api/clients` (CRUD)
-
----
-
-**Última actualización:** Junio 2024
-**Versión:** 1.0.0
-**Autor:** CMMS AI Team
+**Última actualización:** Junio 2026
