@@ -49,7 +49,7 @@ Regla de ownership de un reporte: **admin/supervisor siempre**; un técnico acce
 - **Rate limiting** por área: autenticación (15/15 min), API general (100/15 min) e **IA** (`AI_RATE_LIMIT_MAX`, por defecto 30/15 min, más estricto por el costo de tokens del LLM).
 - **SSL** hacia PostgreSQL. En Neon se usa `rejectUnauthorized:false`; en otros proveedores, configurar el CA correcto.
 - **Seed destructivo bloqueado**: `seed-dummy-data.js` usa `sync({ force:true })` y se niega a ejecutarse en producción salvo `ALLOW_DESTRUCTIVE_SEED=true`.
-- **IA**: todos los endpoints `/api/ai/*` requieren autenticación (incluido `GET /api/ai/agent/tools`).
+- **IA**: todos los endpoints `/api/ai/*` requieren autenticación (`/status`, `/ask`, `/chat`, `/diagnose`, `/reindex`, `/stream-chat`, `/stream-ask`).
 
 ---
 

@@ -124,11 +124,15 @@ Los controllers usan `express-async-handler` para evitar el boilerplate de try/c
 El wizard de 13 pasos usa **React Context** (`WizardContext.jsx`) para:
 - Mantener el estado del formulario completo centralizado
 - Permitir que cada step acceda y actualice `formData` sin prop drilling
-- Persistir borradores en localStorage (pendiente implementar)
+- Persistir borradores en IndexedDB vía idb-keyval
 
 ```jsx
 // WizardContext provee:
-const { formData, updateFormData, currentStep, nextStep, prevStep } = useWizard();
+const {
+  formData, setFormData, updateFormData,
+  currentStep, setStep, nextStep, prevStep,
+  isOffline, clearDraft, clearOfflineDraft
+} = useWizard();
 ```
 
 ### 3.2 Modo Offline

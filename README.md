@@ -114,7 +114,7 @@ Para decisiones de diseño detalladas ver [`ARCHITECTURE.md`](ARCHITECTURE.md). 
 
 **Backend:** Node.js 20+, Express ^5.1, Sequelize ^6.37, PostgreSQL/SQLite, JWT ^9, bcryptjs ^3, Zod ^4, Helmet ^8, Morgan ^1.10, PDFKit ^0.18, LangChain + Groq, Jest ^29, Supertest ^7.
 
-**Frontend:** React ^19, Vite ^6, React Router ^7, TailwindCSS ^3.4, Radix UI / shadcn, React Hook Form ^7, Zod ^4, Axios ^1, Sonner ^2, idb-keyval ^6, Vitest ^3, Testing Library ^16.
+**Frontend:** React ^19, Vite ^6, React Router ^7, TailwindCSS ^3.4, Radix UI / shadcn, React Hook Form ^7, Zod ^4, Axios ^1, Sonner ^2, idb-keyval ^6, Vitest ^4, Testing Library ^16.
 
 ---
 

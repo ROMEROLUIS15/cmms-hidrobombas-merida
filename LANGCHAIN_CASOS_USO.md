@@ -1,5 +1,9 @@
 # 🤖 Casos de Uso LangChain para CMMS Hidrobombas
 
+> ⚠️ **Documento de propuesta.** Los endpoints descritos aquí son casos de uso
+> sugeridos, NO están implementados. Ver [`API_REFERENCE.md`](API_REFERENCE.md)
+> para los endpoints de IA realmente disponibles.
+
 ## Contexto
 
 Tienes un proyecto CMMS (Computerized Maintenance Management System) con:
