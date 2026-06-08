@@ -58,6 +58,7 @@ export default function AIChatBubble() {
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 rounded text-white/70 hover:text-white hover:bg-blue-500"
+                data-testid="ai-chat-close"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -120,7 +121,13 @@ export default function AIChatBubble() {
                   disabled={loading}
                   className="text-sm"
                 />
-                <Button type="submit" size="icon" disabled={loading || !input.trim()}>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={loading || !input.trim()}
+                  data-testid="ai-chat-submit"
+                  aria-label="Enviar pregunta"
+                >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -139,6 +146,7 @@ export default function AIChatBubble() {
         onClick={() => setOpen(!open)}
         className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center transition-all"
         title="Asistente AI"
+        data-testid="ai-chat-toggle"
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
       </button>
