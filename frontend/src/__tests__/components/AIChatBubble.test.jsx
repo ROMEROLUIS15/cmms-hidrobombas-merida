@@ -45,32 +45,41 @@ describe('AIChatBubble', () => {
   });
 
   it('should render the floating button initially', () => {
-    const { container } = render(React.createElement(AIChatBubble));
+    // Arrange & Act
+    render(React.createElement(AIChatBubble));
 
-    expect(container.querySelector('[class*="fixed bottom-4"]')).toBeDefined();
+    // Assert
+    expect(screen.getByTestId('ai-chat-toggle')).toBeInTheDocument();
     expect(screen.queryByText('Asistente de Mantenimiento')).toBeNull();
   });
 
   it('should open the chat panel when the button is clicked', () => {
+    // Arrange
     render(React.createElement(AIChatBubble));
 
-    const toggleBtn = screen.getAllByRole('button')[0];
+    // Act
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
-    expect(screen.getByText('Asistente de Mantenimiento')).toBeDefined();
-    expect(screen.getByPlaceholderText('Escribe tu pregunta...')).toBeDefined();
+    // Assert
+    expect(screen.getByText('Asistente de Mantenimiento')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Escribe tu pregunta...')).toBeInTheDocument();
   });
 
   it('should display the empty state with instructions', () => {
+    // Arrange
     render(React.createElement(AIChatBubble));
 
-    const toggleBtn = screen.getAllByRole('button')[0];
+    // Act
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
-    expect(screen.getByText('Pregúntame sobre equipos,')).toBeDefined();
+    // Assert
+    expect(screen.getByText('Pregúntame sobre equipos,')).toBeInTheDocument();
   });
 
   it('should display messages from the chat', () => {
+    // Arrange
     useAIChat.mockReturnValue({
       messages: [
         { role: 'user', content: 'What is a pump?' },
@@ -82,30 +91,35 @@ describe('AIChatBubble', () => {
     });
 
     render(React.createElement(AIChatBubble));
-    const toggleBtn = screen.getAllByRole('button')[0];
+
+    // Act
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
-    expect(screen.getByText('What is a pump?')).toBeDefined();
-    expect(screen.getByText('A pump moves fluids.')).toBeDefined();
+    // Assert
+    expect(screen.getByText('What is a pump?')).toBeInTheDocument();
+    expect(screen.getByText('A pump moves fluids.')).toBeInTheDocument();
   });
 
   it('should call sendMessage when form is submitted', () => {
+    // Arrange
     render(React.createElement(AIChatBubble));
-    const toggleBtn = screen.getAllByRole('button')[0];
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
+    // Act
     const input = screen.getByPlaceholderText('Escribe tu pregunta...');
     fireEvent.change(input, { target: { value: 'test message' } });
 
-    const submitBtn = screen.getAllByRole('button').find(
-      (btn) => btn.querySelector('[data-testid="icon-send"]')
-    );
+    const submitBtn = screen.getByTestId('ai-chat-submit');
     fireEvent.click(submitBtn);
 
+    // Assert
     expect(mockSendMessage).toHaveBeenCalledWith('test message');
   });
 
   it('should show loading spinner when loading', () => {
+    // Arrange
     useAIChat.mockReturnValue({
       messages: [],
       loading: true,
@@ -114,37 +128,43 @@ describe('AIChatBubble', () => {
     });
 
     render(React.createElement(AIChatBubble));
-    const toggleBtn = screen.getAllByRole('button')[0];
+
+    // Act
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
+    // Assert
     const loaders = screen.getAllByTestId('icon-loader');
     expect(loaders.length).toBeGreaterThanOrEqual(1);
   });
 
   it('should switch to diagnostic tab', () => {
+    // Arrange
     render(React.createElement(AIChatBubble));
-    const toggleBtn = screen.getAllByRole('button')[0];
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
+    // Act
     const diagnoseBtn = screen.getByTitle('Diagnóstico');
     fireEvent.click(diagnoseBtn);
 
-    expect(screen.getByTestId('diagnostic-panel')).toBeDefined();
+    // Assert
+    expect(screen.getByTestId('diagnostic-panel')).toBeInTheDocument();
   });
 
   it('should close the panel when close button is clicked', () => {
+    // Arrange
     render(React.createElement(AIChatBubble));
-    const toggleBtn = screen.getAllByRole('button')[0];
+    const toggleBtn = screen.getByTestId('ai-chat-toggle');
     fireEvent.click(toggleBtn);
 
-    expect(screen.getByText('Asistente de Mantenimiento')).toBeDefined();
+    expect(screen.getByText('Asistente de Mantenimiento')).toBeInTheDocument();
 
-    const allButtons = screen.getAllByRole('button');
-    const xIconBtn = allButtons.find((btn) =>
-      btn.querySelector('[data-testid="icon-x"]')
-    );
+    // Act
+    const xIconBtn = screen.getByTestId('ai-chat-close');
     fireEvent.click(xIconBtn);
 
+    // Assert
     expect(screen.queryByText('Asistente de Mantenimiento')).toBeNull();
   });
 });
