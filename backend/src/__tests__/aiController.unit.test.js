@@ -288,12 +288,39 @@ describe('AI Controller Unit Tests', () => {
   });
 
   describe('aiStatus', () => {
-    it('should return status with configured providers', async () => {
+    // FIX: Capture and restore env vars to prevent cross-suite contamination.
+    // Previously, GROQ_API_KEY and HUGGINGFACEHUB_API_KEY were set but never
+    // restored, polluting process.env for all subsequent test suites.
+    let originalGroqKey;
+    let originalHfKey;
+
+    beforeEach(() => {
+      originalGroqKey = process.env.GROQ_API_KEY;
+      originalHfKey = process.env.HUGGINGFACEHUB_API_KEY;
+    });
+
+    afterEach(() => {
+      if (originalGroqKey === undefined) {
+        delete process.env.GROQ_API_KEY;
+      } else {
+        process.env.GROQ_API_KEY = originalGroqKey;
+      }
+      if (originalHfKey === undefined) {
+        delete process.env.HUGGINGFACEHUB_API_KEY;
+      } else {
+        process.env.HUGGINGFACEHUB_API_KEY = originalHfKey;
+      }
+    });
+
+    it('should return status with all providers configured when API keys are present', async () => {
+      // Arrange
       process.env.GROQ_API_KEY = 'gsk_key';
       process.env.HUGGINGFACEHUB_API_KEY = 'hf_key';
 
+      // Act
       await aiStatus(req, res);
 
+      // Assert
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
@@ -308,12 +335,15 @@ describe('AI Controller Unit Tests', () => {
       });
     });
 
-    it('should reflect unconfigured providers', async () => {
+    it('should reflect unconfigured providers when API keys are absent', async () => {
+      // Arrange
       delete process.env.GROQ_API_KEY;
       delete process.env.HUGGINGFACEHUB_API_KEY;
 
+      // Act
       await aiStatus(req, res);
 
+      // Assert
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,

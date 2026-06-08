@@ -1,12 +1,18 @@
 const { getStats } = require('../controllers/dashboardController');
 
-// Mock all four models used by getStats
+// FIX: Previously, mocks were defined inline in jest.mock() with hardcoded
+// .mockResolvedValue() return values. This made them non-configurable between
+// tests — both tests called getStats() with the same mock state, making the
+// second test redundant. Hoisting the mocks and configuring them in beforeEach
+// allows each test to assert a distinct scenario with specific values.
 jest.mock('../models', () => ({
-  Client: { count: jest.fn().mockResolvedValue(5) },
-  Equipment: { count: jest.fn().mockResolvedValue(12) },
-  ServiceReport: { count: jest.fn().mockResolvedValue(30) },
-  User: { count: jest.fn().mockResolvedValue(3) }
+  Client:        { count: jest.fn() },
+  Equipment:     { count: jest.fn() },
+  ServiceReport: { count: jest.fn() },
+  User:          { count: jest.fn() },
 }));
+
+const { Client, Equipment, ServiceReport, User } = require('../models');
 
 describe('Dashboard Controller Unit Tests', () => {
   let req, res;
@@ -18,30 +24,47 @@ describe('Dashboard Controller Unit Tests', () => {
       json: jest.fn()
     };
     jest.clearAllMocks();
+
+    // Arrange: configure known return values for each test by default.
+    // Individual tests can override these to simulate different DB states.
+    Client.count.mockResolvedValue(5);
+    Equipment.count.mockResolvedValue(12);
+    ServiceReport.count.mockResolvedValue(30);
+    User.count.mockResolvedValue(3);
   });
 
   describe('getStats', () => {
-    it('should return 200 with real DB counts wrapped in { success, data }', async () => {
+    it('should return 200 with a success response containing all dashboard stat keys', async () => {
+      // Act
       await getStats(req, res);
 
+      // Assert
       expect(res.status).toHaveBeenCalledWith(200);
-      const callArg = res.json.mock.calls[0][0];
-      expect(callArg.success).toBe(true);
-      expect(callArg.data).toHaveProperty('total_clients');
-      expect(callArg.data).toHaveProperty('total_equipment');
-      expect(callArg.data).toHaveProperty('total_reports');
-      expect(callArg.data).toHaveProperty('total_technicians');
-      expect(callArg.data).toHaveProperty('pending_maintenance');
+      const body = res.json.mock.calls[0][0];
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty('total_clients');
+      expect(body.data).toHaveProperty('total_equipment');
+      expect(body.data).toHaveProperty('total_reports');
+      expect(body.data).toHaveProperty('total_technicians');
+      expect(body.data).toHaveProperty('pending_maintenance');
     });
 
-    it('should return numeric counts from DB', async () => {
+    it('should return the exact numeric counts provided by the database models', async () => {
+      // Arrange: specific values to verify exact passthrough (not just type)
+      Client.count.mockResolvedValue(7);
+      Equipment.count.mockResolvedValue(15);
+      ServiceReport.count.mockResolvedValue(42);
+      User.count.mockResolvedValue(4);
+
+      // Act
       await getStats(req, res);
 
+      // Assert: verify exact values, not just that they are numbers
       const { data } = res.json.mock.calls[0][0];
-      expect(typeof data.total_clients).toBe('number');
-      expect(typeof data.total_equipment).toBe('number');
-      expect(typeof data.total_reports).toBe('number');
-      expect(typeof data.total_technicians).toBe('number');
+      expect(data.total_clients).toBe(7);
+      expect(data.total_equipment).toBe(15);
+      expect(data.total_reports).toBe(42);
+      expect(data.total_technicians).toBe(4);
     });
   });
 });
