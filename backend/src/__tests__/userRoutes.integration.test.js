@@ -3,15 +3,18 @@ const app = require('../app');
 const { User } = require('../models');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sequelize } = require('../config/database');
 
 describe('User Routes Integration Tests', () => {
   let authToken;
   let testUser;
 
   beforeEach(async () => {
-    await sequelize.sync({ force: true });
-    
+    // FIX: Previously called sequelize.sync({ force: true }) on every test,
+    // re-creating the entire schema each time. This is slow, unnecessary (schema
+    // is already created by setup.js in beforeAll), and can race with the global
+    // setup. We only need to clean user data to guarantee test isolation.
+    await User.destroy({ where: {} });
+
     const hashedPassword = await bcrypt.hash('password123', 10);
     testUser = await User.create({
       username: 'adminuser',

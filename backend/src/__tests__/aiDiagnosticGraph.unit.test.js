@@ -40,22 +40,27 @@ const { createLLM } = require('../ai/config');
 const { searchSimilarReports } = require('../ai/vectorStore');
 const { runDiagnostic } = require('../ai/diagnosticGraph');
 
-const retrieveEquipmentFn = mockStateGraphInstance.addNode.mock.calls.find(
-  ([name]) => name === 'retrieveEquipment'
-)[1];
-const searchHistoryFn = mockStateGraphInstance.addNode.mock.calls.find(
-  ([name]) => name === 'searchHistory'
-)[1];
-const generateDiagnosisFn = mockStateGraphInstance.addNode.mock.calls.find(
-  ([name]) => name === 'generateDiagnosis'
-)[1];
-const recommendActionsFn = mockStateGraphInstance.addNode.mock.calls.find(
-  ([name]) => name === 'recommendActions'
-)[1];
-const askFollowUpFn = mockStateGraphInstance.addNode.mock.calls.find(
-  ([name]) => name === 'askFollowUp'
-)[1];
-const needsMoreInfoFn = mockStateGraphInstance.addConditionalEdges.mock.calls[0][1];
+// FIX: Previously, node functions were extracted with `.find(...)[1]` directly
+// at the module level. If a node name changed or was not registered, this would
+// throw a cryptic `TypeError: Cannot read properties of undefined (reading '1')`.
+// The helper below surfaces a descriptive error message identifying the missing node.
+const getNodeFn = (name) => {
+  const call = mockStateGraphInstance.addNode.mock.calls.find(([n]) => n === name);
+  if (!call) {
+    throw new Error(
+      `Graph node "${name}" was not registered via addNode(). ` +
+      `Registered nodes: [${mockStateGraphInstance.addNode.mock.calls.map(([n]) => n).join(', ')}]`
+    );
+  }
+  return call[1];
+};
+
+const retrieveEquipmentFn = getNodeFn('retrieveEquipment');
+const searchHistoryFn     = getNodeFn('searchHistory');
+const generateDiagnosisFn = getNodeFn('generateDiagnosis');
+const recommendActionsFn  = getNodeFn('recommendActions');
+const askFollowUpFn       = getNodeFn('askFollowUp');
+const needsMoreInfoFn     = mockStateGraphInstance.addConditionalEdges.mock.calls[0][1];
 
 describe('AI Diagnostic Graph Unit Tests', () => {
   describe('module-level graph construction', () => {
