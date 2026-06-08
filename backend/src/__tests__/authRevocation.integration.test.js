@@ -2,11 +2,26 @@ const request = require('supertest');
 const app = require('../app');
 const { User, RevokedToken } = require('../models');
 
-describe('Refresh token revocation', () => {
+// ---------------------------------------------------------------------------
+// Helper: safely extract the refreshToken cookie from a response.
+// FIX: Previously, calling .find() directly on res.headers['set-cookie']
+// would throw a TypeError if the header was absent (e.g., login fails
+// unexpectedly). This helper surfaces a clear assertion failure instead.
+// ---------------------------------------------------------------------------
+const getRefreshCookie = (res) => {
+  const cookies = res.headers['set-cookie'];
+  expect(cookies).toBeDefined(); // Guard: ensures login actually set cookies
+  const cookie = cookies.find((c) => c.startsWith('refreshToken='));
+  expect(cookie).toBeDefined(); // Guard: ensures refreshToken cookie exists
+  return cookie;
+};
+
+describe('Refresh Token Revocation Integration Tests', () => {
   beforeEach(async () => {
+    // Arrange: clean slate before each test (isolation)
     await RevokedToken.destroy({ where: {} });
     await User.destroy({ where: {} });
-    // El hook beforeSave del modelo hashea la contraseña en texto plano.
+    // Use plain-text password — the User model's beforeSave hook hashes it
     await User.create({
       username: 'revuser',
       email: 'rev@example.com',
@@ -16,53 +31,59 @@ describe('Refresh token revocation', () => {
     });
   });
 
-  const login = () =>
+  const loginAs = () =>
     request(app).post('/api/auth/login').send({ email: 'rev@example.com', password: 'password123' });
 
-  const refreshCookieOf = (res) =>
-    res.headers['set-cookie'].find((c) => c.startsWith('refreshToken='));
+  it('should revoke the used refresh token so it cannot be reused (token rotation)', async () => {
+    // Arrange
+    const loginRes = await loginAs().expect(200);
+    const oldRefreshCookie = getRefreshCookie(loginRes);
 
-  it('rota el refresh token y revoca el usado (no se puede reutilizar)', async () => {
-    const loginRes = await login().expect(200);
-    const oldRefresh = refreshCookieOf(loginRes);
-
-    // Primer uso: rota correctamente.
+    // Act: first use rotates correctly
     await request(app)
       .post('/api/auth/refresh-token')
-      .set('Cookie', oldRefresh)
+      .set('Cookie', oldRefreshCookie)
       .expect(200);
 
-    // Reutilizar el token viejo (ya rotado) ahora falla.
-    const reuse = await request(app)
+    // Assert: reusing the rotated (now revoked) token must fail
+    const reuseRes = await request(app)
       .post('/api/auth/refresh-token')
-      .set('Cookie', oldRefresh)
+      .set('Cookie', oldRefreshCookie)
       .expect(401);
 
-    expect(reuse.body.message).toMatch(/revoked/i);
+    expect(reuseRes.body.message).toMatch(/revoked/i);
   });
 
-  it('revoca el refresh token en logout', async () => {
-    const loginRes = await login().expect(200);
-    const refreshCookie = refreshCookieOf(loginRes);
+  it('should revoke the refresh token on logout, preventing further refreshes', async () => {
+    // Arrange
+    const loginRes = await loginAs().expect(200);
+    const refreshCookie = getRefreshCookie(loginRes);
     const accessToken = loginRes.body.token;
 
+    // Act: log out with the valid refresh token
     await request(app)
       .post('/api/auth/logout')
       .set('Authorization', `Bearer ${accessToken}`)
       .set('Cookie', refreshCookie)
       .expect(200);
 
-    const afterLogout = await request(app)
+    // Assert: the revoked token is rejected on the next refresh attempt
+    const afterLogoutRes = await request(app)
       .post('/api/auth/refresh-token')
       .set('Cookie', refreshCookie)
       .expect(401);
 
-    expect(afterLogout.body.message).toMatch(/revoked/i);
+    expect(afterLogoutRes.body.message).toMatch(/revoked/i);
   });
 
-  it('emite un jti distinto en cada refresh token (rotación real)', async () => {
-    const r1 = await login().expect(200);
-    const r2 = await login().expect(200);
-    expect(refreshCookieOf(r1)).not.toBe(refreshCookieOf(r2));
+  it('should issue a unique refresh token (different jti) on every login', async () => {
+    // Arrange & Act: perform two independent logins
+    const login1 = await loginAs().expect(200);
+    const login2 = await loginAs().expect(200);
+
+    // Assert: each session must receive a distinct token
+    const cookie1 = getRefreshCookie(login1);
+    const cookie2 = getRefreshCookie(login2);
+    expect(cookie1).not.toBe(cookie2);
   });
 });
