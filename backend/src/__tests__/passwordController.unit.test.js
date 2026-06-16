@@ -7,8 +7,11 @@ const {
 } = require('../controllers/passwordController');
 const { User, PasswordResetToken } = require('../models');
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 
 jest.mock('../models');
+
+const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
 describe('Password Controller Unit Tests', () => {
   let req;
@@ -47,11 +50,10 @@ describe('Password Controller Unit Tests', () => {
       await forgotPassword(req, res);
 
       expect(PasswordResetToken.destroy).toHaveBeenCalledWith({ where: { userId: 1 } });
-      expect(PasswordResetToken.create).toHaveBeenCalledWith(expect.objectContaining({
-        token: expect.any(String),
-        userId: 1,
-        expiresAt: expect.any(Date)
-      }));
+      const createArg = PasswordResetToken.create.mock.calls[0][0];
+      expect(createArg).toMatchObject({ userId: 1, expiresAt: expect.any(Date) });
+      // El token persistido es un hash SHA-256 (64 hex), no el valor en claro.
+      expect(createArg.token).toMatch(/^[a-f0-9]{64}$/);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true
@@ -68,7 +70,7 @@ describe('Password Controller Unit Tests', () => {
 
       expect(PasswordResetToken.findOne).toHaveBeenCalledWith({
         where: {
-          token: 'invalid_token',
+          token: hashToken('invalid_token'),
           expiresAt: { [Op.gt]: expect.any(Date) }
         }
       });

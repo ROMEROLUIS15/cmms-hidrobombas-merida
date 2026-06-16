@@ -21,13 +21,16 @@ const IdempotencyKey = sequelize.define('IdempotencyKey', {
     type: DataTypes.STRING(255),
     allowNull: false
   },
+  // Nullable: la clave se "reserva" (fila creada) ANTES de procesar la
+  // petición; el status/body se rellenan al responder. Una fila con estos
+  // campos en null representa una petición en vuelo.
   responseStatus: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
   responseBody: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: true
   },
   expiresAt: {
     type: DataTypes.DATE,

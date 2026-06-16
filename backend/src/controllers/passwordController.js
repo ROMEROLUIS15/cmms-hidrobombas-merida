@@ -7,7 +7,12 @@ const { logger } = require('../utils/logger');
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
+// El token que viaja al usuario (por email) es el valor en claro; en la BD solo
+// guardamos su hash. Así, una filtración de solo-lectura de la tabla NO expone
+// tokens usables (el atacante tendría el hash, no el secreto que se valida).
 const generateSecureToken = () => crypto.randomBytes(32).toString('hex');
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -28,11 +33,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Delete any existing tokens for this user
   await PasswordResetToken.destroy({ where: { userId: user.id } });
 
-  // Create new token
+  // Create new token: el plano va por email, el hash a la BD.
   const token = generateSecureToken();
   const expiresAt = new Date(Date.now() + ONE_HOUR_MS);
 
-  await PasswordResetToken.create({ token, expiresAt, userId: user.id });
+  await PasswordResetToken.create({ token: hashToken(token), expiresAt, userId: user.id });
 
   const emailResult = await sendPasswordResetEmail(user.email, token);
   logger.info('Password reset email processed', {
@@ -53,7 +58,7 @@ const validateResetToken = asyncHandler(async (req, res) => {
 
   const record = await PasswordResetToken.findOne({
     where: {
-      token,
+      token: hashToken(token),
       expiresAt: { [Op.gt]: new Date() }
     }
   });
@@ -82,7 +87,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   const record = await PasswordResetToken.findOne({
     where: {
-      token,
+      token: hashToken(token),
       expiresAt: { [Op.gt]: new Date() }
     },
     include: [{ model: User, as: 'user' }]

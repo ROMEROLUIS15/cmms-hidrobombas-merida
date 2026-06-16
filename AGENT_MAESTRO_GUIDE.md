@@ -70,7 +70,7 @@ Ver `API_REFERENCE.md` para detalles de cada endpoint.
 
 ```
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=llama3-70b-8192
 HUGGINGFACEHUB_API_KEY=hf_...
 VECTOR_STORE_PROVIDER=memory       # memory | pgvector
 AI_RATE_LIMIT_MAX=30

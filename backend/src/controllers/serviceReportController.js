@@ -2,7 +2,8 @@ const asyncHandler = require('express-async-handler');
 const { Op } = require('sequelize');
 const { ServiceReport, Equipment, Client, User } = require('../models');
 const { getPaginationParams, paginatedResponse } = require('../utils/pagination');
-const { isPrivileged, getUserId, getAssignedEquipmentIds, canAccessReport } = require('../utils/ownership');
+const { isPrivileged, getUserId, getAssignedEquipmentIds, canAccessReport, canModifyReport } = require('../utils/ownership');
+const { nextReportNumber } = require('../utils/reportNumber');
 
 const forbidden = () => {
   const error = new Error('No tienes permiso para acceder a este reporte');
@@ -20,13 +21,6 @@ const getReportById = async (id) => {
     return null;
   }
   return await ServiceReport.findByPk(id);
-};
-
-// ─── Helper: generate sequential report number ────────────────────────────────
-const generateReportNumber = async () => {
-  const count = await ServiceReport.count();
-  const next = String(count + 1).padStart(4, '0');
-  return `SRV-${next}`;
 };
 
 // ─── GET /api/service-reports ─────────────────────────────────────────────────
@@ -135,7 +129,7 @@ const createServiceReport = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Se requiere seleccionar un equipo' });
   }
 
-  const reportNumber = await generateReportNumber();
+  const reportNumber = await nextReportNumber();
 
   const motorsData = [motor_1_data, motor_2_data, motor_3_data].filter(Boolean);
 
@@ -179,7 +173,7 @@ const updateServiceReport = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (!(await canAccessReport(req.user, report))) {
+  if (!canModifyReport(req.user, report)) {
     throw forbidden();
   }
 
@@ -222,7 +216,7 @@ const deleteServiceReport = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (!(await canAccessReport(req.user, report))) {
+  if (!canModifyReport(req.user, report)) {
     throw forbidden();
   }
 

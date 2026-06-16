@@ -8,10 +8,15 @@ const {
 const { ServiceReport, Equipment, Client, User } = require('../models');
 
 jest.mock('../models');
+jest.mock('../utils/reportNumber', () => ({
+  nextReportNumber: jest.fn().mockResolvedValue('SRV-0001')
+}));
 jest.mock('../utils/pagination', () => ({
   getPaginationParams: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
   paginatedResponse: jest.fn((data, total, page, limit) => ({ data, pagination: { total, page, limit } }))
 }));
+
+const { nextReportNumber } = require('../utils/reportNumber');
 
 describe('Service Report Controller Unit Tests', () => {
   let req, res, next;
@@ -89,13 +94,13 @@ describe('Service Report Controller Unit Tests', () => {
       req.body = { equipment_id: validUUID, motor_1_data: { amps: 10 } };
       req.user = { id: validUUID, username: 'tech1' };
 
-      ServiceReport.count.mockResolvedValue(0);
+      nextReportNumber.mockResolvedValue('SRV-0001');
       ServiceReport.create.mockResolvedValue({ id: validUUID, reportNumber: 'SRV-0001' });
       ServiceReport.findByPk.mockResolvedValue({ id: validUUID, reportNumber: 'SRV-0001' });
 
       await createServiceReport(req, res, next);
 
-      expect(ServiceReport.count).toHaveBeenCalled();
+      expect(nextReportNumber).toHaveBeenCalled();
       expect(ServiceReport.create).toHaveBeenCalledWith(expect.objectContaining({
         reportNumber: 'SRV-0001',
         equipmentId: validUUID,
