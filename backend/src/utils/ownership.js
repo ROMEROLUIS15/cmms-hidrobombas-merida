@@ -91,6 +91,22 @@ const canAccessReport = async (user, report) => {
   return assigned.includes(report.equipmentId);
 };
 
+/**
+ * Determina si un usuario puede MODIFICAR (editar/eliminar) un reporte.
+ * Más estricto que canAccessReport (lectura): solo el autor (owner) o
+ * admin/supervisor. Un técnico asignado al equipo NO puede tocar el trabajo
+ * de otro técnico. Coincide con la doc: "Owner o admin/supervisor".
+ * @param {{ role?: string, id?: string, userId?: string }} user
+ * @param {{ userId?: string }} report
+ * @returns {boolean}
+ */
+const canModifyReport = (user, report) => {
+  if (isPrivileged(user)) return true;
+  if (!report) return false;
+  const uid = getUserId(user);
+  return !!uid && report.userId === uid;
+};
+
 module.exports = {
   PRIVILEGED_ROLES,
   isPrivileged,
@@ -100,4 +116,5 @@ module.exports = {
   canAccessEquipment,
   canAccessClient,
   canAccessReport,
+  canModifyReport,
 };

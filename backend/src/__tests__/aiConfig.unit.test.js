@@ -13,6 +13,7 @@ describe('AI Config Unit Tests', () => {
 
   describe('createLLM', () => {
     it('should create a ChatGroq instance with default config', () => {
+      delete process.env.GROQ_MODEL;
       ChatGroq.mockImplementation((config) => ({ ...config, _isMock: true }));
 
       const llm = createLLM();
@@ -34,6 +35,19 @@ describe('AI Config Unit Tests', () => {
       const llm = createLLM();
 
       expect(llm.apiKey).toBe(testKey);
+    });
+
+    it('should override the model when GROQ_MODEL is set', () => {
+      const original = process.env.GROQ_MODEL;
+      process.env.GROQ_MODEL = 'llama-3.3-70b-versatile';
+      ChatGroq.mockImplementation((config) => config);
+
+      const llm = createLLM();
+
+      expect(llm.model).toBe('llama-3.3-70b-versatile');
+
+      if (original === undefined) delete process.env.GROQ_MODEL;
+      else process.env.GROQ_MODEL = original;
     });
   });
 

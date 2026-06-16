@@ -337,6 +337,69 @@ describe('ServiceReport Routes Integration Tests', () => {
       expect(response.body.data.id).toBe(report.id);
     });
 
+    it('forbids an assigned technician from deleting a report authored by someone else', async () => {
+      // El equipo está asignado al técnico, pero el reporte lo creó el admin.
+      // Lectura sí (canAccessReport), pero modificar/borrar NO (solo owner/admin).
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9101',
+        reportDate: new Date('2026-06-08T12:00:00.000Z'),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+      await TechnicianEquipment.create({
+        technicianId: technician.id,
+        equipmentId: testEquipment.id
+      });
+
+      await request(app)
+        .delete(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .expect(403);
+
+      const stillThere = await ServiceReport.findByPk(report.id);
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('forbids an assigned technician from updating a report authored by someone else', async () => {
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9102',
+        reportDate: new Date('2026-06-08T12:00:00.000Z'),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: testUser.id
+      });
+      await TechnicianEquipment.create({
+        technicianId: technician.id,
+        equipmentId: testEquipment.id
+      });
+
+      await request(app)
+        .put(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ observations: 'intento de edición ajena' })
+        .expect(403);
+    });
+
+    it('allows a technician to update their OWN report', async () => {
+      const report = await ServiceReport.create({
+        reportNumber: 'SRV-9103',
+        reportDate: new Date('2026-06-08T12:00:00.000Z'),
+        visitType: 'mensual',
+        equipmentId: testEquipment.id,
+        userId: technician.id
+      });
+
+      const response = await request(app)
+        .put(`/api/service-reports/${report.id}`)
+        .set('Authorization', `Bearer ${technicianToken}`)
+        .send({ observations: 'edición propia' })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.observations).toBe('edición propia');
+    });
+
     it('list only returns reports the technician can access', async () => {
       // Arrange
       await ServiceReport.create({

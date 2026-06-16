@@ -18,7 +18,8 @@ const ServiceReport = sequelize.define('ServiceReport', {
   // ── Cabecera ────────────────────────────────────────────────────────────────
   reportNumber: {
     type: DataTypes.STRING(20),
-    allowNull: true   // Generated server-side before save
+    allowNull: true,  // Generated server-side before save
+    unique: true      // Identificador visible: nunca debe duplicarse
   },
   reportDate: {
     type: DataTypes.DATEONLY,

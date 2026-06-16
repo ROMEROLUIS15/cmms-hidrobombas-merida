@@ -141,8 +141,9 @@ const optional = asyncHandler(async (req, res, next) => {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7);
-  } else if (req.cookies?.accessToken) {
-    token = req.cookies.accessToken;
+  } else if (req.cookies?.token) {
+    // Las cookies se emiten con el nombre `token` (ver utils/cookie.js).
+    token = req.cookies.token;
   }
 
   if (!token) return next();
@@ -158,7 +159,9 @@ const optional = asyncHandler(async (req, res, next) => {
     });
 
     if (user) {
+      // Misma forma que `protect`: incluir `id` además de `userId`.
       req.user = {
+        id: decoded.userId,
         userId: decoded.userId,
         email: decoded.email,
         role: decoded.role
