@@ -58,7 +58,6 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('orientationchange', resizeCanvas);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resizeCanvas, subStep, canvasKey]);
 
   // Reconstruir canvas cuando cambia el subStep para evitar problemas de teclado
