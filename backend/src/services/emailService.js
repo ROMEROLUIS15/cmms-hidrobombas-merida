@@ -21,8 +21,13 @@ const { logger } = require('../utils/logger');
 const resolveTo = (to) =>
   process.env.EMAIL_DEV_OVERRIDE_TO || process.env.RESEND_DEV_OVERRIDE_TO || to;
 
+/**
+ * Adjuntos normalizados: { filename, content: Buffer }.
+ * Cada proveedor espera un formato distinto; aquí se traduce.
+ */
+
 /** Envío vía SMTP (nodemailer); ideal con Gmail + App Password (gratis, sin dominio). */
-const sendViaSMTP = async ({ to, subject, html }) => {
+const sendViaSMTP = async ({ to, subject, html, attachments }) => {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -30,16 +35,30 @@ const sendViaSMTP = async ({ to, subject, html }) => {
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-  const info = await transporter.sendMail({ from, to, subject, html });
+  const message = { from, to, subject, html };
+  if (attachments?.length) {
+    // nodemailer: { filename, content: Buffer }
+    message.attachments = attachments.map((a) => ({ filename: a.filename, content: a.content }));
+  }
+  const info = await transporter.sendMail(message);
   return { success: true, messageId: info.messageId };
 };
 
 /** Envío vía Brevo (Transactional Email API). */
-const sendViaBrevo = async ({ to, subject, html }) => {
+const sendViaBrevo = async ({ to, subject, html, attachments }) => {
   const sender = {
     email: process.env.BREVO_SENDER_EMAIL,
     name: process.env.BREVO_SENDER_NAME || 'CMMS Hidrobombas Mérida',
   };
+
+  const payload = { sender, to: [{ email: to }], subject, htmlContent: html };
+  if (attachments?.length) {
+    // Brevo: { name, content: base64 }
+    payload.attachment = attachments.map((a) => ({
+      name: a.filename,
+      content: a.content.toString('base64'),
+    }));
+  }
 
   const resp = await globalThis.fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -48,7 +67,7 @@ const sendViaBrevo = async ({ to, subject, html }) => {
       'content-type': 'application/json',
       accept: 'application/json',
     },
-    body: JSON.stringify({ sender, to: [{ email: to }], subject, htmlContent: html }),
+    body: JSON.stringify(payload),
   });
 
   const data = await resp.json().catch(() => ({}));
@@ -59,10 +78,15 @@ const sendViaBrevo = async ({ to, subject, html }) => {
 };
 
 /** Envío vía Resend. */
-const sendViaResend = async ({ to, subject, html }) => {
+const sendViaResend = async ({ to, subject, html, attachments }) => {
   const from = process.env.RESEND_FROM_EMAIL || 'CMMS Hidrobombas <onboarding@resend.dev>';
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const { data, error } = await resend.emails.send({ from, to, subject, html });
+  const message = { from, to, subject, html };
+  if (attachments?.length) {
+    // Resend: { filename, content: Buffer }
+    message.attachments = attachments.map((a) => ({ filename: a.filename, content: a.content }));
+  }
+  const { data, error } = await resend.emails.send(message);
   if (error) {
     return { success: false, error: error.message || JSON.stringify(error) };
   }
@@ -73,7 +97,7 @@ const sendViaResend = async ({ to, subject, html }) => {
  * Envía un correo con el proveedor configurado y normaliza el resultado.
  * @param {{ to: string, subject: string, html: string, kind: string }} params
  */
-const send = async ({ to, subject, html, kind }) => {
+const send = async ({ to, subject, html, kind, attachments }) => {
   const hasSMTP = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   const hasBrevo = !!process.env.BREVO_API_KEY;
   const hasResend = !!process.env.RESEND_API_KEY;
@@ -91,10 +115,10 @@ const send = async ({ to, subject, html, kind }) => {
   const provider = hasSMTP ? 'smtp' : hasBrevo ? 'brevo' : 'resend';
   try {
     const result = hasSMTP
-      ? await sendViaSMTP({ to: recipient, subject, html })
+      ? await sendViaSMTP({ to: recipient, subject, html, attachments })
       : hasBrevo
-        ? await sendViaBrevo({ to: recipient, subject, html })
-        : await sendViaResend({ to: recipient, subject, html });
+        ? await sendViaBrevo({ to: recipient, subject, html, attachments })
+        : await sendViaResend({ to: recipient, subject, html, attachments });
 
     if (result.success) {
       logger.info(`${kind} enviado`, { provider, messageId: result.messageId, to: recipient });
@@ -195,6 +219,20 @@ const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
   const reportUrl = `${frontendUrl}/service-reports/${report.id}`;
 
+  // Generar el PDF y adjuntarlo. Si la generación falla, se envía igual el
+  // correo (con el enlace) en vez de bloquear el envío por un PDF.
+  let attachments;
+  try {
+    const { buildReportPDFBuffer } = require('./pdfService');
+    const pdfBuffer = await buildReportPDFBuffer(report.id);
+    attachments = [{ filename: `Reporte_${report.reportNumber}.pdf`, content: pdfBuffer }];
+  } catch (err) {
+    logger.error('No se pudo generar el PDF para adjuntar al email', {
+      reportId: report.id,
+      message: err.message,
+    });
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; border-radius: 10px;">
@@ -233,6 +271,10 @@ const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
           </a>
         </div>
 
+        ${attachments?.length
+    ? '<p style="color: #555; font-size: 13px; text-align:center;">📎 El reporte en PDF va adjunto a este correo.</p>'
+    : ''}
+
         <p style="color: #999; font-size: 11px;">
           Este es un correo automático. Si tienes alguna pregunta, contacta a Hidrobombas Mérida.
         </p>
@@ -245,6 +287,7 @@ const sendServiceReportEmail = async (report, clientEmail, _clientName) => {
     subject: `📋 Reporte de Servicio ${report.reportNumber} - Hidrobombas Mérida`,
     html,
     kind: 'service report email',
+    attachments,
   });
 };
 

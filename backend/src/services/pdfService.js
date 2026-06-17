@@ -386,4 +386,21 @@ const buildReportPDF = async (reportId) => {
   return doc;
 };
 
-module.exports = { buildReportPDF };
+/**
+ * Genera el PDF del reporte y lo resuelve como Buffer (para adjuntarlo a un
+ * email). El documento de PDFKit es un stream legible; sin consumidor queda en
+ * pausa bufferizando, así que adjuntar el listener tras `doc.end()` recibe todo.
+ * @param {string} reportId
+ * @returns {Promise<Buffer>}
+ */
+const buildReportPDFBuffer = async (reportId) => {
+  const doc = await buildReportPDF(reportId);
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+  });
+};
+
+module.exports = { buildReportPDF, buildReportPDFBuffer };
