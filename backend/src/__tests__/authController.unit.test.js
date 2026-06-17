@@ -29,7 +29,6 @@ describe('Auth Controller Unit Tests', () => {
       req.body = { fullName: 'John Doe', email: 'john@example.com', password: 'password', role: 'admin' };
       User.findOne.mockResolvedValue(null);
       User.create.mockResolvedValue({ id: 1, email: 'john@example.com', role: 'technician', toJSON: () => ({ id: 1, username: 'John Doe' }) });
-      generateToken.mockReturnValue('mockedToken');
 
       // Act
       await register(req, res);
@@ -44,10 +43,15 @@ describe('Auth Controller Unit Tests', () => {
         role: 'technician'
       });
       expect(res.status).toHaveBeenCalledWith(201);
+      // El registro NO inicia sesión: la cuenta queda pendiente de aprobación.
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         success: true,
-        token: 'mockedToken'
+        message: expect.stringContaining('aprobar')
       }));
+      // No debe emitir token ni cookies de sesión.
+      const regResponse = res.json.mock.calls[0][0];
+      expect(regResponse.token).toBeUndefined();
+      expect(generateToken).not.toHaveBeenCalled();
     });
 
     it('should default role to technician if not provided', async () => {
@@ -55,7 +59,6 @@ describe('Auth Controller Unit Tests', () => {
       req.body = { full_name: 'Jane Doe', email: 'jane@example.com', password: 'password' };
       User.findOne.mockResolvedValue(null);
       User.create.mockResolvedValue({ id: 2, email: 'jane@example.com', role: 'technician', toJSON: () => ({}) });
-      generateToken.mockReturnValue('mockedToken');
 
       // Act
       await register(req, res);
@@ -143,17 +146,30 @@ describe('Auth Controller Unit Tests', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Invalid email or password' }));
     });
 
-    it('should return 401 if user is deactivated', async () => {
-      // Arrange
+    it('should return 401 with "pending approval" message if account was never activated', async () => {
+      // Arrange: sin lastLogin → cuenta pendiente de aprobación del admin.
       req.body = { email: 'john@example.com', password: 'password' };
-      User.findOne.mockResolvedValue({ isActive: false });
+      User.findOne.mockResolvedValue({ isActive: false, lastLogin: null });
 
       // Act
       await login(req, res);
 
       // Assert
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Account is deactivated' }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('pendiente de aprobación') }));
+    });
+
+    it('should return 401 with "deactivated" message if a previously active account is disabled', async () => {
+      // Arrange: tuvo lastLogin → fue activa y un admin la desactivó.
+      req.body = { email: 'john@example.com', password: 'password' };
+      User.findOne.mockResolvedValue({ isActive: false, lastLogin: new Date() });
+
+      // Act
+      await login(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('desactivada') }));
     });
 
     it('should return 401 if password is incorrect', async () => {

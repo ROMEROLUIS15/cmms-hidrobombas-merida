@@ -225,7 +225,7 @@ Todas las rutas (salvo login/registro/recuperación y health) requieren `Authori
 | Método | Ruta | Descripción | Acceso |
 |--------|------|-------------|--------|
 | `POST` | `/login` | Iniciar sesión | Público |
-| `POST` | `/register` | Registrar usuario | Público |
+| `POST` | `/register` | Registrar técnico (queda **pendiente**; requiere aprobación de un admin antes de poder iniciar sesión) | Público |
 | `GET` | `/profile` | Perfil actual | Autenticado |
 | `POST` | `/refresh` | Renovar tokens (rota access + refresh) | Cookie refresh |
 | `POST` | `/forgot-password` · `/reset-password` | Recuperación de contraseña | Público |

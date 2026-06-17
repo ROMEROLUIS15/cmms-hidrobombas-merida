@@ -59,7 +59,7 @@ const Login = ({ onLogin, isRegisterMode = false }) => {
           full_name: formData.full_name,
           role: formData.role
         });
-        toast.success('¡Registro exitoso! Revisa tu email para verificar tu cuenta antes de iniciar sesión.');
+        toast.success('¡Registro exitoso! Un administrador debe aprobar tu cuenta antes de que puedas iniciar sesión.');
         setIsLogin(true);
         setFormData({ 
           email: formData.email, 
