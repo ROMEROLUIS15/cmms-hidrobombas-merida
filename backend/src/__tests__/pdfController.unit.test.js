@@ -1,8 +1,12 @@
-const { downloadReportPDF } = require('../controllers/pdfController');
+const { downloadReportPDF, sendReportByEmail } = require('../controllers/pdfController');
 const { buildReportPDF } = require('../services/pdfService');
+const { sendServiceReportEmail } = require('../services/emailService');
 const { ServiceReport } = require('../models');
 
 jest.mock('../services/pdfService');
+jest.mock('../services/emailService', () => ({
+  sendServiceReportEmail: jest.fn()
+}));
 jest.mock('../models', () => ({
   ServiceReport: { findByPk: jest.fn() },
   Equipment: {},
@@ -46,6 +50,82 @@ describe('PDF Controller Unit Tests', () => {
       buildReportPDF.mockRejectedValue(error);
 
       await expect(downloadReportPDF(req, res)).rejects.toThrow('Generation failed');
+    });
+  });
+
+  describe('sendReportByEmail', () => {
+    beforeEach(() => {
+      req.body = {};
+      ServiceReport.findByPk.mockResolvedValue({
+        id: 'test-uuid-123',
+        userId: 'u1',
+        equipmentId: 'e1',
+        reportNumber: 'SRV-0001',
+        equipment: { client: { name: 'Cliente Demo' } }
+      });
+    });
+
+    it('should return 400 when no recipient email is provided', async () => {
+      req.params = { id: 'test-uuid-123' };
+      req.body = {};
+
+      await sendReportByEmail(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(sendServiceReportEmail).not.toHaveBeenCalled();
+    });
+
+    it('should accept recipientEmail (the field the frontend actually sends)', async () => {
+      req.params = { id: 'test-uuid-123' };
+      req.body = { recipientEmail: 'cliente@example.com', recipientName: 'Juan Pérez' };
+      sendServiceReportEmail.mockResolvedValue({ success: true, messageId: 'msg-1' });
+
+      await sendReportByEmail(req, res);
+
+      expect(sendServiceReportEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'test-uuid-123' }),
+        'cliente@example.com',
+        'Juan Pérez'
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
+
+    it('should still accept legacy clientEmail field', async () => {
+      req.params = { id: 'test-uuid-123' };
+      req.body = { clientEmail: 'legacy@example.com' };
+      sendServiceReportEmail.mockResolvedValue({ success: true, messageId: 'msg-2' });
+
+      await sendReportByEmail(req, res);
+
+      expect(sendServiceReportEmail).toHaveBeenCalledWith(
+        expect.any(Object),
+        'legacy@example.com',
+        'Cliente Demo'
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('should report simulated email when SMTP is not configured', async () => {
+      req.params = { id: 'test-uuid-123' };
+      req.body = { recipientEmail: 'cliente@example.com' };
+      sendServiceReportEmail.mockResolvedValue({ simulated: true });
+
+      await sendReportByEmail(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ simulated: true }));
+    });
+
+    it('should return 404 when the report does not exist', async () => {
+      req.params = { id: 'missing' };
+      req.body = { recipientEmail: 'cliente@example.com' };
+      ServiceReport.findByPk.mockResolvedValue(null);
+
+      await sendReportByEmail(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(sendServiceReportEmail).not.toHaveBeenCalled();
     });
   });
 });

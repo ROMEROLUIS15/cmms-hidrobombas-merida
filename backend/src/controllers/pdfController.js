@@ -49,12 +49,15 @@ const downloadReportPDF = asyncHandler(async (req, res) => {
  */
 const sendReportByEmail = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { clientEmail } = req.body;
+  // El frontend envía `recipientEmail`/`recipientName`. Aceptamos también
+  // `clientEmail` por compatibilidad con cualquier llamador antiguo.
+  const { recipientEmail, recipientName, clientEmail } = req.body;
+  const email = recipientEmail || clientEmail;
 
-  if (!clientEmail) {
+  if (!email) {
     return res.status(400).json({
       success: false,
-      message: 'El email del cliente es requerido'
+      message: 'El email del destinatario es requerido'
     });
   }
 
@@ -79,8 +82,8 @@ const sendReportByEmail = asyncHandler(async (req, res) => {
     });
   }
 
-  const clientName = report.equipment?.client?.name || 'Cliente';
-  const result = await sendServiceReportEmail(report, clientEmail, clientName);
+  const clientName = recipientName || report.equipment?.client?.name || 'Cliente';
+  const result = await sendServiceReportEmail(report, email, clientName);
 
   if (result.simulated) {
     return res.status(200).json({
