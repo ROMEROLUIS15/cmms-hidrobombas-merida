@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 // Importar DESPUÉS del patch de indexedDB
-const { enqueueReport, getPendingReports, removePendingReport, replayQueue } =
+const { enqueueReport, getPendingReports, removePendingReport, replayQueue, syncPendingReports } =
   await import('../../hooks/useOfflineQueue');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,6 +87,72 @@ describe('enqueueReport', () => {
     const pending = await getPendingReports();
     expect(pending[0].data._clientRequestId).toBe('id-embed');
     expect(pending[0].clientRequestId).toBe('id-embed');
+  });
+
+  it('persiste la URL destino completa en la cola (para reenvío cross-origin)', async () => {
+    await enqueueReport(
+      { client_id: 'c1', _clientRequestId: 'id-url' },
+      'token',
+      'https://api.example.com/api/service-reports'
+    );
+
+    const pending = await getPendingReports();
+    expect(pending[0].url).toBe('https://api.example.com/api/service-reports');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('syncPendingReports', () => {
+  afterEach(() => {
+    delete global.fetch;
+  });
+
+  it('reenvía a la URL guardada con X-Idempotency-Key y vacía la cola al tener éxito', async () => {
+    await enqueueReport(
+      { client_id: 'c1', _clientRequestId: 'sync-ok' },
+      'tok-123',
+      'https://api.example.com/api/service-reports'
+    );
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+
+    const { synced, failed } = await syncPendingReports();
+
+    expect(synced).toBe(1);
+    expect(failed).toBe(0);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example.com/api/service-reports',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer tok-123',
+          'X-Idempotency-Key': 'sync-ok',
+        }),
+      })
+    );
+    expect(await getPendingReports()).toHaveLength(0);
+  });
+
+  it('mantiene el reporte en cola si el reenvío no es ok (reintento seguro)', async () => {
+    await enqueueReport({ client_id: 'c1', _clientRequestId: 'sync-fail' }, 'tok');
+    global.fetch = vi.fn().mockResolvedValue({ ok: false });
+
+    const { synced, failed } = await syncPendingReports();
+
+    expect(synced).toBe(0);
+    expect(failed).toBe(1);
+    expect(await getPendingReports()).toHaveLength(1);
+  });
+
+  it('mantiene el reporte en cola si fetch lanza (sin red)', async () => {
+    await enqueueReport({ client_id: 'c1', _clientRequestId: 'sync-throw' }, 'tok');
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    const { synced, failed } = await syncPendingReports();
+
+    expect(synced).toBe(0);
+    expect(failed).toBe(1);
+    expect(await getPendingReports()).toHaveLength(1);
   });
 });
 

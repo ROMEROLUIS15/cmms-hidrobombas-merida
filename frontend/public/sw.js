@@ -6,7 +6,7 @@
      • Navegación HTML   → Network First con fallback offline
    ───────────────────────────────────────────────────────────────────────────── */
 
-const CACHE_VERSION   = 'v1.0.1';
+const CACHE_VERSION   = 'v1.0.2';
 const STATIC_CACHE    = `hidrobombas-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE   = `hidrobombas-dynamic-${CACHE_VERSION}`;
 const OFFLINE_PAGE    = '/offline.html';
@@ -66,12 +66,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation → Network First with offline fallback
+  // HTML navigation → Network First, con fallback al APP SHELL cacheado
+  // (la SPA arranca y funciona offline); la página estática offline.html
+  // solo como último recurso si el shell no está en caché.
+  //
+  // OJO: caches.match() devuelve una Promesa (siempre truthy), así que NO se
+  // puede usar `a() || b()`; hay que await-ear y elegir explícitamente.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(OFFLINE_PAGE) || caches.match('/index.html')
-      )
+      fetch(request).catch(async () => {
+        const appShell = await caches.match('/index.html');
+        return appShell || caches.match(OFFLINE_PAGE);
+      })
     );
     return;
   }
@@ -127,27 +133,29 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncOfflineReports() {
-  // Open offline queue from IndexedDB and replay pending requests
   try {
-    const db = await openDB();
-    const tx = db.transaction('pendingReports', 'readwrite');
-    const store = tx.objectStore('pendingReports');
-    const all = await storeGetAll(store);
+    // Leemos toda la cola con una transacción propia y CERRADA antes de los
+    // fetch. (Mantener una transacción IDB viva a través de un `await fetch`
+    // la invalida → el delete posterior fallaría y se reenviaría duplicado.)
+    const all = await idbGetAllReports();
 
     for (const item of all) {
       try {
-        const res = await fetch('/api/service-reports', {
+        // Reenviar a la URL completa guardada al encolar (el backend puede
+        // estar en otro origen que el de la PWA) y con la clave de idempotencia
+        // para que un reintento NO cree un reporte duplicado.
+        const res = await fetch(item.url || '/api/service-reports', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${item.token}`
+            'Authorization': `Bearer ${item.token}`,
+            'X-Idempotency-Key': item.clientRequestId,
           },
           body: JSON.stringify(item.data)
         });
         if (res.ok) {
-          await store.delete(item.id);
+          await idbDeleteReport(item.id);   // transacción nueva y corta
           console.log('[SW] Synced offline report:', item.id);
-          // Notify all clients
           const clients = await self.clients.matchAll();
           clients.forEach(c => c.postMessage({ type: 'REPORT_SYNCED', id: item.id }));
         }
@@ -175,10 +183,22 @@ function openDB() {
   });
 }
 
-function storeGetAll(store) {
+async function idbGetAllReports() {
+  const db = await openDB();
   return new Promise((resolve, reject) => {
-    const req = store.getAll();
+    const tx = db.transaction('pendingReports', 'readonly');
+    const req = tx.objectStore('pendingReports').getAll();
     req.onsuccess = () => resolve(req.result);
+    req.onerror  = () => reject(req.error);
+  });
+}
+
+async function idbDeleteReport(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pendingReports', 'readwrite');
+    const req = tx.objectStore('pendingReports').delete(id);
+    req.onsuccess = () => resolve();
     req.onerror  = () => reject(req.error);
   });
 }

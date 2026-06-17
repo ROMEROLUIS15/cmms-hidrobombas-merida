@@ -77,9 +77,12 @@ const dbDelete = async (id) => {
  *
  * @param {Object} reportData  — the form data to submit
  * @param {string} token       — the JWT token to replay with
+ * @param {string} [url]       — endpoint completo de destino. Se guarda porque
+ *   el backend puede estar en otro origen que la PWA; el Service Worker debe
+ *   reenviar a esta URL, no a una ruta relativa a su propio origen.
  * @returns {{ id: number, clientRequestId: string }} queued item metadata
  */
-export const enqueueReport = async (reportData, token) => {
+export const enqueueReport = async (reportData, token, url = '/api/service-reports') => {
   // Generate a stable idempotency key for this specific report attempt
   const clientRequestId = reportData._clientRequestId || uuidv4();
   const reportWithId = { ...reportData, _clientRequestId: clientRequestId };
@@ -94,6 +97,7 @@ export const enqueueReport = async (reportData, token) => {
   const id = await dbAdd({
     data:            reportWithId,
     token,
+    url,
     clientRequestId,
     queuedAt:        new Date().toISOString(),
   });
@@ -116,6 +120,43 @@ export const getPendingReports = () => dbGetAll();
  * Removes a specific pending report from the queue.
  */
 export const removePendingReport = (id) => dbDelete(id);
+
+/**
+ * Replay manual de la cola (fallback cuando NO hay Background Sync, p. ej.
+ * Safari/iOS). Reenvía cada reporte por fetch a su `url` guardada, incluyendo
+ * `X-Idempotency-Key` para que el backend deduplique reintentos, y elimina de
+ * la cola solo los que se envían con éxito.
+ * @returns {{ synced: number, failed: number }}
+ */
+export const syncPendingReports = async () => {
+  const pending = await dbGetAll();
+  let synced = 0;
+  let failed = 0;
+
+  for (const item of pending) {
+    try {
+      const res = await fetch(item.url || '/api/service-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${item.token}`,
+          'X-Idempotency-Key': item.clientRequestId,
+        },
+        body: JSON.stringify(item.data),
+      });
+      if (res.ok) {
+        await dbDelete(item.id);
+        synced++;
+      } else {
+        failed++;
+      }
+    } catch {
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+};
 
 /**
  * Manually replay all queued reports (when online).
