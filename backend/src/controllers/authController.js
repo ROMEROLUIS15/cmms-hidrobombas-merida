@@ -44,6 +44,8 @@ const register = asyncHandler(async (req, res) => {
 
     // Create new user — role is always 'technician' on self-registration.
     // Admins can promote users via PUT /api/users/:id/role.
+    // La cuenta queda PENDIENTE (isActive:false por defecto): un administrador
+    // debe aprobarla (PUT /api/users/:id/status) antes de poder iniciar sesión.
     const newUser = await User.create({
       username,
       email: email.toLowerCase(),
@@ -51,18 +53,11 @@ const register = asyncHandler(async (req, res) => {
       role: 'technician'
     });
 
-
-    // Generate JWT token
-    const token = generateToken(newUser.id, newUser.email, newUser.role);
-    const refreshToken = generateRefreshToken(newUser.id);
-
-    setAuthCookies(res, token, refreshToken);
-
-    // Return success response
+    // No se emite sesión en el registro: el acceso se habilita tras la
+    // aprobación del administrador, no automáticamente.
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      token,
+      message: 'Registro recibido. Un administrador debe aprobar tu cuenta antes de que puedas iniciar sesión.',
       user: newUser.toJSON()
     });
 });
@@ -92,11 +87,14 @@ const login = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if user is active
+    // Check if user is active. Distinguir "pendiente de aprobación" (nunca
+    // activada, sin lastLogin) de "desactivada" (lo estuvo y un admin la apagó).
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated'
+        message: user.lastLogin
+          ? 'Tu cuenta ha sido desactivada. Contacta al administrador.'
+          : 'Tu cuenta está pendiente de aprobación por un administrador.'
       });
     }
 
