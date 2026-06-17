@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { useWizard } from '../WizardContext';
 import { Label } from '../../ui/label';
@@ -11,11 +11,55 @@ import { toast } from 'sonner';
 const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
   const { formData, updateFormData, prevStep } = useWizard();
   const sigCanvas = useRef(null);
+  const canvasContainerRef = useRef(null);
   const [sigCleared, setSigCleared] = useState(!formData.signature_base64);
   const [canvasKey, setCanvasKey] = useState(0);
-
   // 0 = Observaciones, 1 = Firma
   const [subStep, setSubStep] = useState(0);
+
+  // Ajusta la resolución interna del canvas a su tamaño real en pantalla,
+  // escalando por devicePixelRatio para una firma NÍTIDA y sin desalineación
+  // del trazo. Sin esto, el canvas queda en 300px y se ve pequeño/borroso al
+  // estirarse con `w-full`. Preserva los trazos al recalcular (p. ej. al rotar
+  // el dispositivo); ignora cambios que no alteren el tamaño (p. ej. el teclado).
+  const resizeCanvas = useCallback(() => {
+    const sig = sigCanvas.current;
+    const container = canvasContainerRef.current;
+    if (!sig || !container) return;
+    const canvas = sig.getCanvas();
+    const cssWidth = container.clientWidth;
+    const cssHeight = container.clientHeight;
+    if (!cssWidth || !cssHeight) return;
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const targetW = Math.round(cssWidth * ratio);
+    const targetH = Math.round(cssHeight * ratio);
+    if (canvas.width === targetW && canvas.height === targetH) return;
+
+    let data = null;
+    try { data = sig.toData(); } catch { /* sin datos previos */ }
+    canvas.width = targetW;
+    canvas.height = targetH;
+    canvas.getContext('2d').scale(ratio, ratio);
+    sig.clear();
+    if (data && data.length) {
+      try { sig.fromData(data); } catch { /* noop */ }
+    }
+  }, []);
+
+  // Redimensiona tras montar la firma y ante cambios de tamaño/orientación.
+  useEffect(() => {
+    if (subStep !== 1) return undefined;
+    const raf = requestAnimationFrame(resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', resizeCanvas);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('orientationchange', resizeCanvas);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizeCanvas, subStep, canvasKey]);
 
   // Reconstruir canvas cuando cambia el subStep para evitar problemas de teclado
   useEffect(() => {
@@ -170,8 +214,9 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
             )}
           </div>
 
-          <div 
-            className="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative shadow-inner"
+          <div
+            ref={canvasContainerRef}
+            className="relative w-full h-[320px] sm:h-[380px] lg:h-[440px] border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden shadow-inner"
             style={{ touchAction: 'none' }}
             onTouchStart={(e) => e.preventDefault()}
           >
@@ -181,11 +226,7 @@ const Step12ObservacionesFirma = ({ onSubmit, isSubmitting }) => {
               penColor="black"
               backgroundColor="rgba(255,255,255,1)"
               canvasProps={{
-                className: 'w-full',
-                style: { 
-                  height: '320px',
-                  touchAction: 'none',
-                },
+                className: 'w-full h-full block touch-none',
                 onTouchStart: (e) => e.preventDefault(),
               }}
               onEnd={handleCanvasEnd}
