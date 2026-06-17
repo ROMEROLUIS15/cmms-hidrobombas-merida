@@ -56,7 +56,7 @@ const EmailModal = ({ reportId, clientEmail, onClose }) => {
         </div>
 
         <p className="text-sm text-slate-500 mb-5">
-          El reporte en PDF se adjuntará automáticamente al correo.
+          Se enviará un correo con un enlace para ver el reporte completo.
         </p>
 
         <div className="space-y-4">
