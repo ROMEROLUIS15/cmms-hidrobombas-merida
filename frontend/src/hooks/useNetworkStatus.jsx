@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { syncPendingReports } from './useOfflineQueue';
 
 /**
  * Hook para monitorear el estado de la conexión de red.
@@ -12,11 +13,15 @@ export const useNetworkStatus = () => {
     const goOnline = () => {
       setIsOnline(true);
       if (!navigator.onLine) return; // guard
-      // Trigger background sync if supported
+      // Background Sync si está disponible (Chromium); el SW reenviará la cola.
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then((sw) => {
           sw.sync.register('sync-reports').catch(() => {});
         });
+      } else {
+        // Sin Background Sync (p. ej. Safari/iOS): replay manual desde la página.
+        // Idempotente en el backend, así que es seguro reintentar.
+        syncPendingReports().catch(() => {});
       }
     };
 

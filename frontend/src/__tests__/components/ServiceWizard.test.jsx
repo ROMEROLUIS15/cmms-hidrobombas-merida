@@ -100,7 +100,8 @@ vi.mock('../../components/ServiceWizard/ServiceWizard', async (getModule) => {
         } catch (error) {
           if (!navigator.onLine || error.code === 'ECONNABORTED' || error.response?.status >= 500) {
             try {
-              await mockEnqueueReport(formData, token);
+              // Mirror del componente real: se pasa la URL completa de destino.
+              await mockEnqueueReport(formData, token, 'http://localhost:8001/api/service-reports');
               setSuccess(true);
             } catch (queueError) {
               setErrorMsg('Sin conexión y error al guardar localmente.');
@@ -305,11 +306,13 @@ describe('ServiceWizard', () => {
       await userEvent.click(screen.getByTestId('submit-button'));
 
       await waitFor(() => {
-        expect(mockEnqueueReport).toHaveBeenCalledWith(
-          expect.any(Object),
-          'mock-token'
-        );
+        expect(mockEnqueueReport).toHaveBeenCalled();
       }, { timeout: 3000 });
+
+      const [payloadArg, tokenArg, urlArg] = mockEnqueueReport.mock.calls[0];
+      expect(payloadArg).toEqual(expect.any(Object));
+      expect(tokenArg).toBe('mock-token');
+      expect(urlArg).toContain('/api/service-reports');
     });
   });
 });

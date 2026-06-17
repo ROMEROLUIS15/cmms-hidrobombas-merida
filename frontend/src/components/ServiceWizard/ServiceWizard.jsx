@@ -67,7 +67,9 @@ const ServiceWizardContent = () => {
 
       if (isNetworkError) {
         try {
-          await enqueueReport(reportPayload, token);
+          // Guardamos la URL completa para que el Service Worker reenvíe al
+          // backend correcto (otro origen en producción), no a su propio origen.
+          await enqueueReport(reportPayload, token, `${BACKEND_URL}/api/service-reports`);
           setSuccess(true);
           toast.success('Sin conexión. El reporte se sincronizará automáticamente al reconectar.');
           await clearOfflineDraft();
