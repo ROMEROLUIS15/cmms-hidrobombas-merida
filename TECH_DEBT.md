@@ -48,3 +48,11 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 **Estado real:** `npm audit` muestra **0 high / 0 critical**. Las moderate son una sola advisory de `uuid` (bounds de buffer en v3/v5/v6 *al pasar un `buf`*) que la app no dispara (usa `UUIDV4` sin `buf`). Las low son tooling de dev/test (jsdom, eslint, jest, brace-expansion) que no se envía a producción.
 
 **Deuda real:** limpiar las alertas de Dependabot **una a una**, verificando el **preview de Vercel** + `curl /api/health` ANTES de mergear a `main`. Nunca con `npm audit fix` masivo.
+
+**Actualización 2026-06-16 (rama `chore/security-deps`):**
+- Se aplicó `npm audit fix` **sin `--force`** (solo cambia el lockfile; `package.json` intacto). Resultado:
+  - **Backend:** 32 → 25 vulnerabilidades. Eliminadas las **2 high** (`ws`, `form-data`, transitivas de `@langchain/community` → `jsdom@16`). Verificado: suite completa (338 tests) en verde, y `require('./src/app')` + grafos IA (`assistantGraph`/`diagnosticGraph`/`ragChain`) cargan sin error ESM. Churn del lockfile ~1099 líneas (el riesgo conocido) → **gate final = preview de Vercel**.
+  - **Frontend:** 11 → 8 vulnerabilidades. `npm run build` + 76 tests en verde.
+- **Pendientes (requieren `--force` / breaking, NO aplicados):**
+  - Backend `uuid` (20 moderate): `audit fix --force` quiere **degradar `sequelize` a 3.30.0** (rompe el ORM). La app usa `UUIDV4` sin `buf`, así que **no dispara** la advisory (GHSA-w5hq-g745-h8pq). Se deja.
+  - Frontend 3 high restantes: requieren bump **mayor de `vite`** (rompería el build). Tooling de dev, no llega al usuario. Se deja para un bump deliberado de Vite.
