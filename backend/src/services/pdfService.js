@@ -13,6 +13,21 @@ const parseJSON = (v) => {
 const fmt = (v, suffix = '') =>
   v !== undefined && v !== null && v !== '' ? `${v}${suffix}` : '—';
 
+// Booleans (botones ✔/✘ del wizard) → "Sí" / "No"; cualquier otro valor cae en fmt()
+const fmtBool = (v) => {
+  if (v === true) return 'Sí';
+  if (v === false) return 'No';
+  return fmt(v);
+};
+
+// water_level se guarda como 'full' | 'medium' | 'empty'
+const waterLevelLabel = (v) =>
+  ({ full: 'Lleno', medium: 'Medio', empty: 'Vacío' })[v] || fmt(v);
+
+// Ruido: añade " dB" solo si el valor es numérico (el campo admite texto, p.ej. "Normal")
+const fmtNoise = (v) =>
+  v !== undefined && v !== null && v !== '' && !isNaN(parseFloat(v)) ? `${v} dB` : fmt(v);
+
 const fmtDate = (d) => {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('es-ES', {
@@ -180,17 +195,17 @@ const buildReportPDF = async (reportId) => {
   // Water level row
   const wlY = doc.y;
   const wlItems = [
-    ['Nivel de Agua', we.water_level],
-    ['Contacto Flotante NA 1', we.float_contact_na],
-    ['Contacto Flotante NA 2', we.float_contact_na_2],
-    ['LED Tanque Vacío',       we.led_empty_tank],
-    ['Tiempo 1 (min)',         we.time_1],
-    ['Tiempo 2 (min)',         we.time_2],
+    ['Nivel de Agua',          waterLevelLabel(we.water_level)],
+    ['Contacto Flotante NA 1', fmtBool(we.float_contact_na)],
+    ['Contacto Flotante NA 2', fmtBool(we.float_contact_na_2)],
+    ['LED Tanque Vacío',       fmtBool(we.led_empty_tank)],
+    ['Tiempo 1 (seg)',         fmt(we.time_1)],
+    ['Tiempo 2 (seg)',         fmt(we.time_2)],
   ];
   const wlCw = pw / wlItems.length;
   wlItems.forEach(([label, val], i) => {
     cell(doc, label, 40 + i * wlCw, wlY, wlCw, 12, { bg: C.lightGray, bold: true, fontSize: 6 });
-    cell(doc, fmt(val), 40 + i * wlCw, wlY + 12, wlCw, 14, { fontSize: 8 });
+    cell(doc, val, 40 + i * wlCw, wlY + 12, wlCw, 14, { fontSize: 8 });
   });
 
   doc.y = wlY + 32;
@@ -202,17 +217,19 @@ const buildReportPDF = async (reportId) => {
     sectionHeader(doc, '3. Datos de Motores', C.primary, C.lightBlue);
 
     const motorCols = [
-      { label: 'HP',         key: 'motor_hp',         w: 35 },
-      { label: 'In (A)',     key: 'amperage',          w: 40 },
-      { label: 'Fase R (A)', key: 'phase_r',           w: 42 },
-      { label: 'Fase S (A)', key: 'phase_s',           w: 42 },
-      { label: 'Fase T (A)', key: 'phase_t',           w: 42 },
-      { label: 'Bobina',     key: 'bobina_value',      w: 42 },
-      { label: 'Contactos',  key: 'contactos_value',   w: 42 },
-      { label: 'T°Motor',    key: 'motor_temp',        w: 42 },
-      { label: 'T°Voluta',   key: 'voluta_temp',       w: 42 },
-      { label: 'T°Relé',     key: 'thermal_temp',      w: 42 },
-      { label: 'Relé (A)',   key: 'thermal_amp',       w: 42 },
+      { label: 'HP',         key: 'motor_hp',         w: 32 },
+      { label: 'In (A)',     key: 'amperage',          w: 36 },
+      { label: 'Fase R',     key: 'phase_r',           w: 38 },
+      { label: 'Fase S',     key: 'phase_s',           w: 38 },
+      { label: 'Fase T',     key: 'phase_t',           w: 38 },
+      { label: 'Bobina',     key: 'bobina_value',      w: 38, bool: true },
+      { label: 'Contact.',   key: 'contactos_value',   w: 38, bool: true },
+      { label: 'T°Motor',    key: 'motor_temp',        w: 38, temp: true },
+      { label: 'T°Voluta',   key: 'voluta_temp',       w: 38, temp: true },
+      { label: 'T°Relé',     key: 'thermal_temp',      w: 38, temp: true },
+      { label: 'Relé (A)',   key: 'thermal_amp',       w: 36 },
+      { label: 'N/C',        key: 'thermal_nc',        w: 30, bool: true },
+      { label: 'N/O',        key: 'thermal_no',        w: 30, bool: true },
     ];
 
     const mhY = doc.y;
@@ -232,8 +249,10 @@ const buildReportPDF = async (reportId) => {
       let x = 40 + 35;
       motorCols.forEach(c => {
         let val = motor[c.key];
-        if (c.key === 'motor_temp' || c.key === 'voluta_temp' || c.key === 'thermal_temp') {
-          val = val ? `${val}°C` : '—';
+        if (c.temp) {
+          val = (val !== undefined && val !== null && val !== '') ? `${val}°C` : '—';
+        } else if (c.bool) {
+          val = fmtBool(val);
         } else {
           val = fmt(val);
         }
@@ -265,8 +284,8 @@ const buildReportPDF = async (reportId) => {
     const bcw = pw / breakers.length;
     breakers.forEach(([label, val], i) => {
       cell(doc, label, 40 + i * bcw, ctrlY, bcw, 12, { bg: C.lightGray, bold: true, fontSize: 6 });
-      const isOK = String(val).toUpperCase() === 'OK';
-      cell(doc, fmt(val), 40 + i * bcw, ctrlY + 12, bcw, 14,
+      const isOK = val === true || String(val).toUpperCase() === 'OK';
+      cell(doc, fmtBool(val), 40 + i * bcw, ctrlY + 12, bcw, 14,
         { fontSize: 8, color: isOK ? '#166534' : C.text, bold: isOK });
     });
 
@@ -289,6 +308,21 @@ const buildReportPDF = async (reportId) => {
 
     doc.y = presY + 32;
 
+    // Valves / level (booleanos del wizard — Step Presiones y Válvulas)
+    const valvesY = doc.y;
+    const valveItems = [
+      ['Válvula Seguridad', fmtBool(ctrl.safety_valve)],
+      ['Electrodos Nivel',  fmtBool(ctrl.electrode_level)],
+      ['Válvula/Tubo Nivel', fmtBool(ctrl.valve_level)],
+    ];
+    const vcw = pw / valveItems.length;
+    valveItems.forEach(([label, val], i) => {
+      cell(doc, label, 40 + i * vcw, valvesY, vcw, 12, { bg: C.lightGray, bold: true, fontSize: 6 });
+      cell(doc, val, 40 + i * vcw, valvesY + 12, vcw, 14, { fontSize: 8 });
+    });
+
+    doc.y = valvesY + 32;
+
     // Pump cycles — up to 3 pumps
     const pumps = [1, 2, 3].filter(n =>
       ctrl[`pump_${n}_on_minutes`] || ctrl[`pump_${n}_rest_minutes`] || ctrl[`pump_${n}_noise_db`]
@@ -307,7 +341,7 @@ const buildReportPDF = async (reportId) => {
           `Bomba ${n}`,
           fmt(ctrl[`pump_${n}_on_minutes`], ' min'),
           fmt(ctrl[`pump_${n}_rest_minutes`], ' min'),
-          fmt(ctrl[`pump_${n}_noise_db`], ' dB'),
+          fmtNoise(ctrl[`pump_${n}_noise_db`]),
         ];
         vals.forEach((v, i) => {
           const x = 40 + pumpW.slice(0, i).reduce((a, b) => a + b, 0);
@@ -374,12 +408,14 @@ const buildReportPDF = async (reportId) => {
   // ════════════════════════════════════════════════════════════════════════════
   // FOOTER
   // ════════════════════════════════════════════════════════════════════════════
-  const footerY = doc.page.height - 35;
+  // Posición dentro del margen inferior (page.height-40) para no desbordar a una
+  // 2ª página. lineBreak:false evita que PDFKit pagine por el alto de la línea.
+  const footerY = doc.page.height - 58;
   doc.rect(40, footerY, pw, 0.5).fill(C.border);
   doc.fontSize(7).font('Helvetica').fillColor(C.gray)
      .text(
        `Generado el ${new Date().toLocaleString('es-ES')}  •  ${report.reportNumber}  •  Hidrobombas Mérida`,
-       40, footerY + 4, { width: pw, align: 'center' }
+       40, footerY + 4, { width: pw, align: 'center', lineBreak: false }
      );
 
   doc.end();
