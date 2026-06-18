@@ -1,6 +1,6 @@
 # Deuda Técnica — CMMS Hidrobombas Mérida
 
-Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-06-06**.
+Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-06-17**.
 
 ---
 
@@ -56,3 +56,20 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 - **Pendientes (requieren `--force` / breaking, NO aplicados):**
   - Backend `uuid` (20 moderate): `audit fix --force` quiere **degradar `sequelize` a 3.30.0** (rompe el ORM). La app usa `UUIDV4` sin `buf`, así que **no dispara** la advisory (GHSA-w5hq-g745-h8pq). Se deja.
   - Frontend 3 high restantes: requieren bump **mayor de `vite`** (rompería el build). Tooling de dev, no llega al usuario. Se deja para un bump deliberado de Vite.
+
+---
+
+## 4. Campos huérfanos del wizard de mantenimiento — decidir limpiar o crear UI
+
+**Qué pasa (2026-06-17):** Hay campos definidos en `initialData` de `frontend/src/components/ServiceWizard/WizardContext.jsx` que **ningún paso del wizard captura** (no tienen UI) y el PDF no muestra. Quedan siempre vacíos:
+
+- En `control_peripherals_data`: `preset_work`, `preset_emergency`, `preset_compressor`, `valve_vents` (válvula venteo), `pilot_lights` (luces piloto), `switches` (interruptores), `timer` (temporizador).
+- En `motor_X_data`: `contactor_working` (estado del contactor).
+
+**Decisión pendiente (requiere mirar la planilla física de Hidrobombas):**
+- Si el ítem **sí está** en la hoja de papel → es funcionalidad pendiente: crear UI en el paso correspondiente del wizard **y** mostrarlo en `backend/src/services/pdfService.js`.
+- Si **no está** → es campo muerto: eliminarlo de `initialData` (más limpio; reversible por git).
+
+**Contexto relacionado:** el `pdfService.js` ya soporta hasta **3 bombas**, pero `initialData` solo define `pump_1` y `pump_2` (falta `pump_3_on_minutes`/`_rest_minutes`/`_noise_db` + su UI en `Step11CiclosRuido.jsx`). Mismo criterio: agregar la 3ª bomba si la planilla la contempla.
+
+**Nota:** no es pérdida de datos (los campos nunca se llenan), es deuda de consistencia entre el formulario, el modelo y el PDF. Verificado por inspección del wizard, controller y render real del PDF el 2026-06-17.
