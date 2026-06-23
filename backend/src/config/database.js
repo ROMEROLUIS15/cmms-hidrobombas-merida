@@ -2,11 +2,19 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 const { logger } = require('../utils/logger');
 
-// Forzar la carga de pg para entornos serverless como Vercel
+// Driver serverless de Neon: conecta vía WebSocket sobre el puerto 443 en lugar
+// de Postgres TCP por el 5432. Muchas redes (firewall/ISP/VPN) bloquean el 5432
+// saliente y lo cortan con ECONNRESET; el 443 pasa sin problema. Es además el
+// driver que Neon recomienda para entornos serverless (Vercel), donde evita
+// agotar conexiones. Lo usamos como dialectModule de Sequelize (drop-in de `pg`).
+let neonServerless = null;
 try {
-  require('pg');
+  neonServerless = require('@neondatabase/serverless');
+  // En Node < 22 no hay WebSocket global; usamos el paquete `ws`.
+  neonServerless.neonConfig.webSocketConstructor =
+    typeof WebSocket !== 'undefined' ? WebSocket : require('ws');
 } catch {
-  // Ignorar si falla localmente si no se usa Postgres
+  // Ignorar si no está instalado (p. ej. entorno solo-SQLite para tests).
 }
 
 const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
@@ -31,12 +39,13 @@ if (isPostgres) {
     host: url.hostname,
     port: Number(url.port) || 5432,
     dialect: 'postgres',
+    // Conexión vía WebSocket (Neon serverless). Si por alguna razón el driver no
+    // está disponible, Sequelize cae al `pg` estándar (TCP) y dialectOptions aplica.
+    ...(neonServerless ? { dialectModule: neonServerless } : {}),
     dialectOptions: {
       ssl: {
         rejectUnauthorized: false,
       },
-      family: 4,
-      keepAlive: true,
     },
     logging: false,
     pool: {
@@ -54,10 +63,14 @@ if (isPostgres) {
   });
 }
 
-// Fallback a SQLite si la conexión PostgreSQL falla en desarrollo
+// Fallback a SQLite — SOLO opt-in explícito (ALLOW_SQLITE_FALLBACK=true).
+// Por defecto preferimos FALLAR de forma visible: un fallback silencioso oculta
+// problemas de conexión a Neon y te hace desarrollar contra un motor distinto al
+// de producción (pérdida de paridad).
+const allowSqliteFallback = process.env.ALLOW_SQLITE_FALLBACK === 'true';
+
 function fallbackToSQLite() {
-  if (process.env.VERCEL) return;
-  logger.warn('Database: fallback to SQLite for local development');
+  logger.warn('Database: ALLOW_SQLITE_FALLBACK activo → usando SQLite local en lugar de Postgres');
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || './database.sqlite',
@@ -69,11 +82,30 @@ function fallbackToSQLite() {
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    logger.info('Database connection established');
+    logger.info('Database connection established', { dialect: sequelize.getDialect() });
   } catch (error) {
     logger.error('Database connection failed', { message: error.message });
+
+    // En Vercel/producción nunca hay fallback: el error debe propagarse.
     if (process.env.VERCEL) throw error;
-    fallbackToSQLite();
+
+    // Si NO estábamos usando Postgres (DATABASE_URL vacía, p. ej. tests), el fallo
+    // es de la propia SQLite y no hay nada a lo que caer: propágalo.
+    if (!isPostgres) throw error;
+
+    // Postgres falló en local. Solo caemos a SQLite si se pidió explícitamente.
+    if (allowSqliteFallback) {
+      fallbackToSQLite();
+      return;
+    }
+
+    logger.error(
+      'Conexión a Postgres (Neon) fallida. NO se hace fallback silencioso a SQLite. ' +
+      'Revisa DATABASE_URL en backend/.env y la conectividad con Neon ' +
+      '(https://status.neon.tech). Si de verdad quieres trabajar offline contra ' +
+      'SQLite, ejecuta con ALLOW_SQLITE_FALLBACK=true.'
+    );
+    throw error;
   }
 };
 
@@ -87,7 +119,9 @@ const initializeDatabase = async () => {
     logger.info('Database migrations up to date', { applied: applied.length });
   } catch (error) {
     logger.error('Database migration failed', { message: error.message });
-    if (process.env.VERCEL) throw error;
+    // Propagar siempre: un fallo de DB no debe dejar arrancar el servidor "sano".
+    // server.js hace process.exit(1) en dev y relanza en Vercel.
+    throw error;
   }
 };
 

@@ -3,4 +3,5 @@
 - [Resend planned email](resend-planned-email.md) — `resend` dep no se usa aún pero es intencional; no eliminar
 - [Langchain deps frágiles en prod](langchain-deps-fragile-prod.md) — npm audit fix / bumps de langchain tumban producción aunque los tests pasen; verificar preview de Vercel antes de mergear
 - [CV: impacto sin métricas de volumen](cv-impact-no-volume-metrics.md) — en proyectos a la medida de pocos usuarios, NO empujar métricas de escala; enmarcar impacto cualitativamente
+- [Neon vía WebSocket](neon-websocket-driver.md) — la red local bloquea Postgres TCP/5432; Sequelize usa el driver serverless de Neon (WS/443), no volver a `pg` TCP
 - [npm workspaces: lock raíz](npm-workspaces-root-lock.md) — monorepo workspaces; el único lock que cuenta es el raíz; auditar con `npm audit` ahí, no por la lista de Dependabot
