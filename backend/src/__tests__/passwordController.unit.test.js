@@ -10,6 +10,11 @@ const { Op } = require('sequelize');
 const crypto = require('crypto');
 
 jest.mock('../models');
+jest.mock('../services/emailService', () => ({
+  sendPasswordResetEmail: jest.fn().mockResolvedValue({ success: true }),
+  sendWelcomeEmail: jest.fn().mockResolvedValue({ success: true }),
+  sendServiceReportEmail: jest.fn().mockResolvedValue({ success: true })
+}));
 
 const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
