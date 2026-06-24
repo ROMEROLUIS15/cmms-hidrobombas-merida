@@ -43,8 +43,13 @@ if (isPostgres) {
     // está disponible, Sequelize cae al `pg` estándar (TCP) y dialectOptions aplica.
     ...(neonServerless ? { dialectModule: neonServerless } : {}),
     dialectOptions: {
+      // Verificamos la cadena de certificados TLS (antes estaba en `false`, lo
+      // que aceptaba cualquier cert y abría la puerta a MITM en la conexión a la
+      // DB). Neon emite certificados de una CA pública (Let's Encrypt / ISRG Root),
+      // confiada por Node por defecto, así que la verificación pasa tanto en local
+      // como en Vercel. Verificado contra la instancia real antes de endurecer.
       ssl: {
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
       },
     },
     logging: false,
