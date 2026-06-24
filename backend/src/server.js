@@ -7,6 +7,22 @@ const { initErrorReporter, reportError } = require('./utils/errorReporter');
 
 const PORT = process.env.PORT || 8001;
 
+// Validación de entorno crítico (fail-fast). Un JWT_SECRET ausente degrada la
+// auth de forma silenciosa: jwt firmaría/verificaría con `undefined`. Preferimos
+// no arrancar a servir un backend con la autenticación rota.
+const validateEnv = () => {
+  if (!process.env.JWT_SECRET) {
+    const msg = 'JWT_SECRET es obligatoria y está ausente. El backend no puede emitir ni verificar tokens de forma segura.';
+    logger.error('Configuración de entorno inválida', { message: msg });
+    throw new Error(msg);
+  }
+  if (process.env.JWT_SECRET.length < 32) {
+    logger.warn('JWT_SECRET es más corta de lo recomendado (<32 caracteres). Usa un secreto largo y aleatorio.');
+  }
+};
+
+validateEnv();
+
 // Inicializa el reporte de errores externo (Sentry) si está configurado.
 initErrorReporter();
 
