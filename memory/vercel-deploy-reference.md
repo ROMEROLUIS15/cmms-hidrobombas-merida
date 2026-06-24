@@ -8,7 +8,7 @@ metadata:
 Despliegue en Vercel (cuenta `romeroluis15` / scope `luis-romeros-projects`):
 - **Backend (API):** proyecto `cmms-hidrobombas-merida-backend` → https://cmms-hidrobombas-merida-backend.vercel.app (`backend/vercel.json`, `@vercel/node` sobre `src/server.js`).
 - **Frontend:** proyecto `hidrobombas-merida` → https://hidrobombas-merida.vercel.app.
-- Existe también `cmms-hidrobombas-merida` (sin URL; ignorar salvo que se confirme su uso).
+- **Solo existen esos dos proyectos.** Hubo un tercero huérfano `cmms-hidrobombas-merida` (origen desconocido) cuyo Framework Preset quedó en "Services" y fallaba en cada push a `main` con `Project framework is set to "services"`; se **eliminó** el 2026-06-24 vía `npx vercel project rm`. No recrearlo.
 
 **CLI:** no está en el PATH de Bash/PowerShell; usar **`npx vercel ...`** (v54.x). El
 directorio raíz quedó **linkeado** al proyecto backend (`.vercel/`, gitignored).
