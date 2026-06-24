@@ -79,6 +79,9 @@ chainlit.md
 database.sqlite
 agenthub/agents/youtube/db
 
+# Neon project metadata (orgId/projectId; no es secreto pero innecesario en el repo)
+.neon
+
 # Archive files and large assets
 **/*.zip
 **/*.tar.gz

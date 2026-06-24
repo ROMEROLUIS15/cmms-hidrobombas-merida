@@ -2,6 +2,9 @@
   "name": "cmms-hidrobombas-merida",
   "version": "1.0.0",
   "description": "CMMS Monorepo Root",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "prepare": "node -e \"if (process.env.CI || process.env.VERCEL) { console.log('Husky skipped in CI/Vercel'); process.exit(0); } require('child_process').execSync('husky', { stdio: 'inherit' });\"",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
