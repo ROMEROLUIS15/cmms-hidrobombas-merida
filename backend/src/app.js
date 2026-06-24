@@ -9,6 +9,7 @@ require('dotenv').config();
 const { errorHandler } = require('./middleware/errorHandler');
 const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
 const { correlationId, CORRELATION_HEADER } = require('./middleware/correlationId');
+const { createRateLimitStore } = require('./config/rateLimitStore');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -84,12 +85,17 @@ app.get('/', (req, res) => {
 // skip() desactiva el límite en tests para que los integration tests no sean bloqueados
 const isTestEnv = () => process.env.NODE_ENV === 'test';
 
+// Store compartido (Redis) si REDIS_URL está configurada; si no, cada limiter
+// cae al MemoryStore por defecto. Cada uno usa su propio prefijo para no
+// colisionar las claves en Redis. Ver config/rateLimitStore.js para el porqué
+// (en serverless el MemoryStore es por-instancia y debilita el límite real).
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 15, // máximo 15 intentos por ventana
   skip: isTestEnv,
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRateLimitStore('rl:auth:'),
   message: {
     success: false,
     message: 'Demasiados intentos de autenticación. Intenta de nuevo en 15 minutos.'
@@ -102,6 +108,7 @@ const apiLimiter = rateLimit({
   skip: isTestEnv,
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRateLimitStore('rl:api:'),
   message: {
     success: false,
     message: 'Demasiadas peticiones. Intenta de nuevo más tarde.'
@@ -116,6 +123,7 @@ const aiLimiter = rateLimit({
   skip: isTestEnv,
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRateLimitStore('rl:ai:'),
   message: {
     success: false,
     message: 'Demasiadas peticiones a los servicios de IA. Intenta de nuevo más tarde.'
