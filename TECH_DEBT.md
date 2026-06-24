@@ -1,6 +1,6 @@
 # Deuda Técnica — CMMS Hidrobombas Mérida
 
-Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-06-17**.
+Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-06-24**.
 
 ---
 
@@ -37,6 +37,24 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 - Falta la **verificación en vivo con SMTP** (no se hizo porque aún no hay App Password en el `.env`); con Resend sí se verificó envío real.
 
 **Limpieza menor:** ahora `nodemailer` SÍ se usa (proveedor SMTP). Si en el futuro se fija un único proveedor, eliminar los no usados (`resend` y/o `nodemailer`) en un cambio aparte (evitar churn del lockfile — ver item 3).
+
+**Actualización 2026-06-24 — verificación en vivo realizada: SMTP RECHAZADO.**
+Se probó `transporter.verify()` contra Gmail con las credenciales del `.env`
+(`hidrobombasmerida@gmail.com` + la App Password actual). Resultado: **`535-5.7.8
+Username and Password not accepted`**. Reproducido con la App Password **con
+espacios** (19 chars) y **sin espacios** (16 chars) → ambas rechazadas, así que
+NO es problema de formato: la App Password está **inválida/expirada/revocada**.
+- **Impacto:** con `SMTP_USER`/`SMTP_PASS` presentes, el servicio usa SMTP y
+  **no** cae a Resend si la auth falla (modelo "el primero configurado gana").
+  Aunque `RESEND_API_KEY` está puesta, hoy los correos de reporte/reset **fallan**.
+- **El código es correcto** (14 tests de email/PDF + 347 backend en verde); el
+  fallo es 100% de credencial.
+- **No verificado en Vercel:** las env vars de producción son independientes del
+  `.env` local; no se pudo comprobar desde aquí.
+- **Arreglo (NO es código):** regenerar la App Password en
+  `myaccount.google.com/apppasswords` (con verificación en 2 pasos activa) y
+  setearla en `.env` y en Vercel. Alternativa: activar Resend quitando
+  `SMTP_USER`/`SMTP_PASS` (pero sin dominio propio solo envía al dueño de la cuenta).
 
 ---
 
