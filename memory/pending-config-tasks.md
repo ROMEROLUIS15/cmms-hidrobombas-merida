@@ -18,6 +18,12 @@ opcional A1 (#45).
    [[vercel-deploy-reference]].
 2. **SMTP:** regenerar la App Password de Gmail (la del `.env` local está rechazada)
    y confirmar/actualizar las `SMTP_*` de prod. Ver [[smtp-credentials-broken]].
+3. **GROQ_API_KEY ausente en prod (descubierto 2026-07-12):** `npx vercel env ls production`
+   no lista ninguna var `GROQ_*`. La IA **nunca ha funcionado en producción**
+   (`/api/ai/status` → `groq_configured: false`), pese a que `TECH_DEBT.md` afirmaba lo
+   contrario (ya corregido). Para habilitarla: setear `GROQ_API_KEY` en Vercel.
+   `GROQ_MODEL` NO hace falta — el default del código ya es `openai/gpt-oss-120b`
+   (migrado desde los Llama que Groq deja de servir el 2026-08-16).
 
 **Pendiente de CÓDIGO (hallazgos de auditoría no aplicados, requieren decisión):**
 - **A2/A3 — token hardening (FE+BE):** el frontend usa `localStorage` + `Bearer`
