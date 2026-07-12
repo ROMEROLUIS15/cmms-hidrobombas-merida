@@ -183,7 +183,7 @@ FRONTEND_URL=http://localhost:5000
 
 # IA (opcional)
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama3-70b-8192
+GROQ_MODEL=openai/gpt-oss-120b
 AI_RATE_LIMIT_MAX=30
 HUGGINGFACEHUB_API_KEY=hf_...
 VECTOR_STORE_PROVIDER=memory

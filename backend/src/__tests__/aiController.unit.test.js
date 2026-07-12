@@ -327,7 +327,7 @@ describe('AI Controller Unit Tests', () => {
         data: {
           groq_configured: true,
           huggingface_configured: true,
-          llm_provider: 'Groq (llama3-70b-8192)',
+          llm_provider: 'Groq (openai/gpt-oss-120b)',
           embeddings_provider: 'HuggingFace (all-MiniLM-L6-v2)',
           vector_store: 'MemoryVectorStore (en memoria)',
           langgraph_agents: ['assistantGraph', 'diagnosticGraph'],

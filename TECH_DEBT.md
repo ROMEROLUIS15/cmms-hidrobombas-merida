@@ -7,14 +7,15 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 ## 1. IA (agente) — no verificable localmente, sí en producción
 
 **Qué es:** El asistente/diagnóstico usa:
-- **LLM:** Groq `llama3-70b-8192` (`@langchain/groq`) — ver `backend/src/ai/config.js`.
+- **LLM:** Groq `openai/gpt-oss-120b` (`@langchain/groq`) — ver `backend/src/ai/config.js`. Migrado desde `llama3-70b-8192` el 2026-07-12: Groq retiró esa familia Llama y anunció la baja de `llama-3.3-70b-versatile` y `llama-3.1-8b-instant` (dejan de servirse el **2026-08-16**). GPT-OSS 120B es el reemplazo recomendado por Groq para la gama 70B; `openai/gpt-oss-20b` es la opción barata. El modelo se cambia sin tocar código vía `GROQ_MODEL`.
 - **Embeddings:** HuggingFace `all-MiniLM-L6-v2`.
 - **Orquestación:** LangGraph — `assistantGraph.js` (agente con tools), `diagnosticGraph.js` (grafo multinodo), `ragChain.js` (RAG). Endpoints en `backend/src/routes/aiRoutes.js`.
 
 **El flujo del agente NO se puede verificar desde la red local (Venezuela):**
 - **Groq** geo-bloquea por IP. Devuelve `403 Access denied. Please check your network settings` aunque la API key sea válida.
   Verificado 2026-06-06: `POST /api/ai/chat` → `500` (el agente llega a Groq y este rechaza).
-  → **Funciona en producción** porque Vercel ejecuta desde US (IP permitida). No hay arreglo de código.
+  → La IP de Vercel (US) **sí** está permitida, así que el geo-bloqueo no aplica allí. No hay arreglo de código.
+  → ⚠️ **PERO en producción no está configurada `GROQ_API_KEY`** (verificado 2026-07-12 con `npx vercel env ls production`: solo hay vars de DB/JWT/SMTP/SEED). Es decir, la IA **tampoco funciona en prod hoy**; `/api/ai/status` responde `groq_configured: false`. Para habilitarla hay que setear `GROQ_API_KEY` en Vercel. `GROQ_MODEL` no hace falta: el default del código ya es el modelo vigente.
 - **HuggingFace** (embeddings): el token actual NO tiene el permiso *"Inference Providers"*.
   → Arreglo (no es código): regenerar el token en `hf.co/settings/tokens` activando **"Make calls to Inference Providers"**.
 
