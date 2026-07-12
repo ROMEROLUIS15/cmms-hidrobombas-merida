@@ -24,6 +24,26 @@ describe('Auth Controller Unit Tests', () => {
   });
 
   describe('register', () => {
+    // Por defecto el sistema YA está inicializado (hay un admin activo). El
+    // registro está cerrado mientras no lo haya — eso se cubre aparte, abajo y
+    // en bootstrapGate.integration.test.js.
+    beforeEach(() => {
+      User.count.mockResolvedValue(1);
+    });
+
+    it('rechaza el registro con 409 si no hay ningún admin activo', async () => {
+      User.count.mockResolvedValue(0);
+      req.body = { fullName: 'John Doe', email: 'john@example.com', password: 'password' };
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, code: 'SYSTEM_NOT_INITIALIZED' })
+      );
+      expect(User.create).not.toHaveBeenCalled();
+    });
+
     it('should register a new user successfully (fullName)', async () => {
       // Arrange
       req.body = { fullName: 'John Doe', email: 'john@example.com', password: 'password', role: 'admin' };
