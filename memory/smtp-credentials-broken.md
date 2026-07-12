@@ -20,6 +20,21 @@ formato: la credencial está **inválida/expirada/revocada**.
   pueden leer (cifradas), así que el email de prod **podría** funcionar aunque el
   local no — sin verificar todavía.
 
-**Arreglo (NO es código):** regenerar App Password en `myaccount.google.com/apppasswords`
-(con 2FA) y setearla en `.env` y en Vercel. Documentado en `TECH_DEBT.md` #2.
-Relacionado: [[resend-planned-email]], [[pending-config-tasks]].
+**Re-verificado el 2026-06-24:** el usuario estaba seguro de que la clave
+(`axsv jrwd quym fakx`) era nueva (generada el 23/06) y funcionaba, y pensaba que
+los espacios podían ser el problema. Re-probado en vivo con un script que carga el
+`.env` igual que la app: dotenv parsea bien la clave (`"axsv jrwd quym fakx"`, 19
+chars, espacios conservados, comentario inline descartado) y `verify()` da **535 con
+espacios (19) Y sin espacios (16)**. Los espacios quedan **descartados como causa**.
+Al preguntar, el usuario confirmó que **nunca la había probado enviando** — asumió
+que funcionaba porque el sistema la generó sin error (generar ≠ autenticar). Nota:
+el `.env` tiene dos líneas `SMTP_PASS` (l.85 con espacios activa, l.86 sin espacios
+comentada); dejar solo una al actualizar.
+
+**Arreglo (NO es código):** 1) confirmar que la verificación en 2 pasos está
+realmente ACTIVA en `hidrobombasmerida@gmail.com` (causa #1 de 535 tras generar);
+2) regenerar App Password en `myaccount.google.com/apppasswords` y copiar los 16
+chars completos (un carácter mal copiado = 535); 3) setearla en `.env` y Vercel;
+4) re-verificar en vivo hasta ver `AUTH OK` antes de darla por buena. Falta también
+probar las `SMTP_*` de prod (Vercel) con un envío real. Documentado en `TECH_DEBT.md`
+#2. Relacionado: [[resend-planned-email]], [[pending-config-tasks]].
