@@ -62,7 +62,7 @@ describe('AI Routes Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.groq_configured).toBe(true);
       expect(response.body.data.huggingface_configured).toBe(true);
-      expect(response.body.data.llm_provider).toBe('Groq (llama3-70b-8192)');
+      expect(response.body.data.llm_provider).toBe('Groq (openai/gpt-oss-120b)');
       expect(response.body.data.langgraph_agents).toEqual(['assistantGraph', 'diagnosticGraph']);
     });
   });

@@ -20,7 +20,7 @@ describe('AI Config Unit Tests', () => {
 
       expect(ChatGroq).toHaveBeenCalledTimes(1);
       expect(ChatGroq).toHaveBeenCalledWith({
-        model: 'llama3-70b-8192',
+        model: 'openai/gpt-oss-120b',
         temperature: 0.1,
         apiKey: process.env.GROQ_API_KEY,
       });
@@ -39,12 +39,12 @@ describe('AI Config Unit Tests', () => {
 
     it('should override the model when GROQ_MODEL is set', () => {
       const original = process.env.GROQ_MODEL;
-      process.env.GROQ_MODEL = 'llama-3.3-70b-versatile';
+      process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
       ChatGroq.mockImplementation((config) => config);
 
       const llm = createLLM();
 
-      expect(llm.model).toBe('llama-3.3-70b-versatile');
+      expect(llm.model).toBe('openai/gpt-oss-20b');
 
       if (original === undefined) delete process.env.GROQ_MODEL;
       else process.env.GROQ_MODEL = original;

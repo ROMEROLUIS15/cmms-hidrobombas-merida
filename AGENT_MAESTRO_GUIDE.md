@@ -70,7 +70,9 @@ Ver `API_REFERENCE.md` para detalles de cada endpoint.
 
 ```
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama3-70b-8192
+# Reemplazo de los Llama deprecados por Groq (baja: 2026-08-16).
+# Alternativa barata: openai/gpt-oss-20b
+GROQ_MODEL=openai/gpt-oss-120b
 HUGGINGFACEHUB_API_KEY=hf_...
 VECTOR_STORE_PROVIDER=memory       # memory | pgvector
 AI_RATE_LIMIT_MAX=30
