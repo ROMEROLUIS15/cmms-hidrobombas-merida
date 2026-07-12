@@ -4,6 +4,25 @@ const asyncHandler = require('express-async-handler');
 const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { setAuthCookies, clearAuthCookies } = require('../utils/cookie');
 const { revokeToken, isTokenRevoked } = require('../utils/tokenRevocation');
+const { hasActiveAdmin } = require('../utils/bootstrap');
+
+/**
+ * Estado de inicialización del sistema (público, sin auth).
+ * Permite al frontend explicar por qué el registro está cerrado en vez de
+ * mostrar un error genérico. No expone datos: solo un booleano.
+ * @returns {Promise<void>} `{ needsBootstrap: boolean }`
+ */
+const bootstrapStatus = asyncHandler(async (req, res) => {
+  const initialized = await hasActiveAdmin();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      needsBootstrap: !initialized,
+      registrationOpen: initialized
+    }
+  });
+});
 
 /**
  * Registra un nuevo usuario en el sistema.
@@ -22,6 +41,19 @@ const register = asyncHandler(async (req, res) => {
     // Accept both camelCase (fullName) and snake_case (full_name) from different clients
     const { fullName, full_name, email, password, role: _role } = req.body;
     const username = fullName || full_name;
+
+    // Sin un admin activo, registrarse es una trampa: la cuenta nace pendiente
+    // (isActive:false) y NADIE puede aprobarla. Se rechaza el registro en vez de
+    // crear usuarios muertos. El primer admin se crea con bootstrap-admin.js.
+    // Deliberadamente NO se auto-promueve al primer registrado: en un deploy
+    // público, cualquiera que llegue antes que el dueño se quedaría de admin.
+    if (!(await hasActiveAdmin())) {
+      return res.status(409).json({
+        success: false,
+        message: 'El sistema aún no tiene un administrador. No se pueden crear cuentas todavía. Contacta al responsable del sistema.',
+        code: 'SYSTEM_NOT_INITIALIZED'
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -217,5 +249,6 @@ module.exports = {
   login,
   getProfile,
   logout,
-  refreshToken
+  refreshToken,
+  bootstrapStatus
 };

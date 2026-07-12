@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, getProfile, logout, refreshToken } = require('../controllers/authController');
+const { register, login, getProfile, logout, refreshToken, bootstrapStatus } = require('../controllers/authController');
 const {
   forgotPassword,
   validateResetToken,
@@ -14,6 +14,9 @@ const { registerSchema, loginSchema } = require('../validators/authValidators');
 const router = express.Router();
 
 // ── Public Auth ──────────────────────────────────────────────────────────────
+// Estado de inicialización: el frontend lo consulta para explicar por qué el
+// registro está cerrado mientras no exista un administrador.
+router.get('/bootstrap-status', bootstrapStatus);
 router.post('/register', validateRequest(registerSchema), register);
 router.post('/login', validateRequest(loginSchema), login);
 
