@@ -17,14 +17,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.js'],
     include: ['src/**/__tests__/**/*.{test,spec}.{js,jsx}'],
-    moduleNameMapper: {
-      '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
-      '^react-router-dom$': '<rootDir>/__mocks__/react-router-dom.js',
-      '^axios$': '<rootDir>/__mocks__/axios.js',
-      '^sonner$': '<rootDir>/__mocks__/sonner.js',
-      '^@/lib/utils$': '<rootDir>/src/lib/utils.jsx',
-      '^@/(.*)$': '<rootDir>/src/$1',
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
