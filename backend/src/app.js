@@ -10,6 +10,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
 const { correlationId, CORRELATION_HEADER } = require('./middleware/correlationId');
 const { createRateLimitStore } = require('./config/rateLimitStore');
+const { resolveTrustProxy } = require('./utils/trustProxy');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -21,6 +22,13 @@ const aiRoutes = require('./routes/aiRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
+
+// Confianza en el proxy: en Vercel la IP real del cliente solo llega vía
+// X-Forwarded-For. Sin esto, express-rate-limit lanza
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR y limita a todo el mundo por la IP del
+// proxy (es decir, no limita). Ver utils/trustProxy.js para por qué fuera de
+// Vercel NO se confía en la cabecera.
+app.set('trust proxy', resolveTrustProxy());
 
 // Security middleware
 app.use(helmet({
