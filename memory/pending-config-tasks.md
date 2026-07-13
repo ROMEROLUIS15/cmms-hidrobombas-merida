@@ -28,9 +28,12 @@ admin (#54), validación real de la API key de Groq (#55), import de MemoryVecto
   Efecto colateral: desde local ya no se pueden firmar tokens para probar endpoints
   autenticados de prod — hay que loguearse en la web.
 
-**Pendiente de CONFIGURACIÓN (no es código):**
-1. **SMTP:** lo único que sigue roto. Regenerar la App Password de Gmail y confirmar las
-   `SMTP_*` de prod. Ver [[smtp-credentials-broken]].
+- **SMTP**: resuelto. No era la App Password (siempre fue válida): `SMTP_USER` apuntaba a
+  otra cuenta de Gmail. Corregido en `.env` y Vercel; envío real verificado desde
+  producción. Ver [[smtp-credentials-broken]].
+
+**Pendiente de CONFIGURACIÓN: nada.** Toda la configuración de producción está resuelta y
+verificada en vivo (BD, admin, IA, rate limiting, secretos, email).
 
 **Pendiente de CÓDIGO (requieren decisión):**
 - **`@langchain/classic` es dependencia TRANSITIVA**, no declarada en `package.json`,
