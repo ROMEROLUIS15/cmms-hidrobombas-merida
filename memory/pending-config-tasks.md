@@ -31,19 +31,26 @@ admin (#54), validación real de la API key de Groq (#55), import de MemoryVecto
 - **SMTP**: resuelto. No era la App Password (siempre fue válida): `SMTP_USER` apuntaba a
   otra cuenta de Gmail. Corregido en `.env` y Vercel; envío real verificado desde
   producción. Ver [[smtp-credentials-broken]].
+- **`VECTOR_STORE_PROVIDER=pgvector`** (Production+Preview): extensión `vector 0.8.1`
+  habilitada en Neon, tabla `ai_report_embeddings` creada. El RAG ya es **fiable**: con
+  `MemoryVectorStore` el índice vivía en la RAM de cada lambda, así que un reporte recién
+  creado podía NO verse (el reindex iba a una instancia y la pregunta a otra). Verificado:
+  antes fallaba de forma intermitente, ahora 5/5. De paso se cerró un `rejectUnauthorized:
+  false` en ese proveedor (MITM contra la misma BD que Sequelize ya protegía) — PR #66.
 
 **Pendiente de CONFIGURACIÓN: nada.** Toda la configuración de producción está resuelta y
-verificada en vivo (BD, admin, IA, rate limiting, secretos, email).
+verificada en vivo (BD, admin, IA, RAG, rate limiting, secretos, email).
 
 **Pendiente de CÓDIGO (requieren decisión):**
+- **⚠️ Tests en verde con producción rota.** El hallazgo más importante de la sesión: al
+  ejercitar el flujo real contra prod aparecieron ~6 bugs que el CI no vio (crear un
+  equipo fallaba SIEMPRE). Decisión pendiente: **correr los tests de integración contra
+  Postgres en el CI**. Ver [[tests-verde-produccion-rota]].
 - **`@langchain/classic` es dependencia TRANSITIVA**, no declarada en `package.json`,
   y de ella depende el RAG (`MemoryVectorStore`). Declararla explícita toca el lock →
   hacerlo aislado y verificado en preview. Ver [[langchain-deps-fragile-prod]].
-- **Deps de swagger sin commitear:** `backend/package.json` + `package-lock.json` tienen
-  `openspec`, `swagger-jsdoc` y `swagger-ui-express` añadidas pero **ningún archivo las
-  importa**. Se decidió NO mergearlas hasta que exista el código que las use.
-- **Vector store en RAM:** `MemoryVectorStore` se reconstruye en cada cold start.
-  Con volumen, pasar a `VECTOR_STORE_PROVIDER=pgvector` (ya soportado).
+- **Deps de swagger:** se decidió NO mergearlas hasta que exista el código que las use
+  (`openspec`, `swagger-jsdoc`, `swagger-ui-express`); revertidas del árbol.
 - **A2/A3 — token hardening (FE+BE):** el frontend usa `localStorage` + `Bearer` (no las
   cookies httpOnly que el backend ya emite); el interceptor de 401 no auto-refresca.
 - **A4 — política de password:** Zod solo exige min 8 (bajo valor).
