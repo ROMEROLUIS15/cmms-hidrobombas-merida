@@ -8,5 +8,7 @@
 - [npm audit sin fix seguro](npm-audit-no-safe-fix.md) — las ~28 vulns son dev-only / LangChain / sequelize→uuid no explotable; NO correr `audit fix --force`
 - [Clean install falla con ERESOLVE](clean-install-eresolve.md) — no borrar el lock para reinstalar; un install desde cero se cae por peer-deps; usar `--legacy-peer-deps` si hace falta
 - [SMTP local roto](smtp-credentials-broken.md) — la App Password de Gmail del .env está rechazada (535); prod tiene SMTP_* propias sin verificar; regenerar
-- [Referencia de deploy Vercel](vercel-deploy-reference.md) — proyectos (backend=cmms-hidrobombas-merida-backend), `npx vercel` linkeado, env vars de prod; sin REDIS_URL aún
-- [Tareas de config pendientes](pending-config-tasks.md) — roadmap post-auditoría: REDIS_URL/Upstash, SMTP, y hallazgos A2-A5 sin aplicar
+- [Referencia de deploy Vercel](vercel-deploy-reference.md) — proyectos (backend=cmms-hidrobombas-merida-backend), `npx vercel` linkeado, env vars de prod; usar `vercel redeploy`, nunca `--prod` desde local
+- [Tareas de config pendientes](pending-config-tasks.md) — estado tras poner prod en marcha (2026-07-13); queda REDIS_URL, SMTP y rotar el JWT_SECRET compartido con local
+- [BD de producción (Neon)](prod-neon-database.md) — cuál es la Neon buena; Vercel apuntó a una vacía y el login daba 500 con "relation users does not exist"
+- [El geo-bloqueo de Groq oculta keys muertas](groq-geoblock-masks-invalid-key.md) — desde local nunca sabrás si la API key sirve; mirar `groq_key_status`, no `groq_configured`
