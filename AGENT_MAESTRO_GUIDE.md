@@ -74,7 +74,9 @@ GROQ_API_KEY=gsk_...
 # Alternativa barata: openai/gpt-oss-20b
 GROQ_MODEL=openai/gpt-oss-120b
 HUGGINGFACEHUB_API_KEY=hf_...
-VECTOR_STORE_PROVIDER=memory       # memory | pgvector
+# memory  = en RAM, se pierde en cada cold start (solo desarrollo con SQLite)
+# pgvector = persistente en Postgres (lo que usa PRODUCCIÓN; requiere CREATE EXTENSION vector)
+VECTOR_STORE_PROVIDER=pgvector
 AI_RATE_LIMIT_MAX=30
 ```
 

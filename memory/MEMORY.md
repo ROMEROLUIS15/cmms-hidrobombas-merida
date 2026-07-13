@@ -9,7 +9,8 @@
 - [Clean install falla con ERESOLVE](clean-install-eresolve.md) — no borrar el lock para reinstalar; un install desde cero se cae por peer-deps; usar `--legacy-peer-deps` si hace falta
 - [SMTP: el 535 no era la clave](smtp-credentials-broken.md) — RESUELTO; la App Password siempre fue válida, `SMTP_USER` apuntaba a otra cuenta. Ante un 535, mirar la CUENTA antes que la clave
 - [Referencia de deploy Vercel](vercel-deploy-reference.md) — proyectos (backend=cmms-hidrobombas-merida-backend), `npx vercel` linkeado, env vars de prod; usar `vercel redeploy`, nunca `--prod` desde local
-- [Tareas de config pendientes](pending-config-tasks.md) — estado tras poner prod en marcha (2026-07-13); ya solo queda el SMTP
+- [Tareas de config pendientes](pending-config-tasks.md) — estado tras poner prod en marcha (2026-07-13); NO queda config pendiente. El checklist de código vivo está en `PENDING_TASKS.md` (raíz)
+- [Email sin failover](email-sin-failover.md) — `emailService` es multi-proveedor pero el primero configurado gana; si SMTP falla NO intenta Resend, y eso ya costó semanas de correos perdidos
 - [Upstash Redis (rate limiting)](upstash-redis-rate-limit.md) — cómo está montado; conectarlo tumbó producción (500 en todos los logins): un fallo del store NO debe matar la API
 - [Tests en verde, producción rota](tests-verde-produccion-rota.md) — SQLite no valida ENUM/UUID y los tests codificaban los bugs; RESUELTO con un job de CI contra Postgres real (no quitar la salvaguarda del DROP SCHEMA)
 - [El frontend debe usar URL absoluta](frontend-url-api-absoluta.md) — frontend y backend son dominios distintos; una ruta relativa `/api/...` da 405 y dejó el asistente de IA muerto desde el día uno

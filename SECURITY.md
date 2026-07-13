@@ -8,8 +8,24 @@ Este documento describe el modelo de seguridad del sistema y los requisitos de c
 
 - **JWT** de acceso (header `Authorization: Bearer` o cookie `httpOnly`) con expiración configurable (`JWT_EXPIRES_IN`).
 - **Refresh token** independiente con su propio secreto. El endpoint `POST /api/auth/refresh` **rota** ambos tokens en cada uso.
-- Cookies con `httpOnly`, `SameSite=strict` y `secure` en producción → mitiga XSS-robo-de-token y CSRF.
+- Cookies con `httpOnly`, `SameSite=strict` y `secure` en producción.
 - Contraseñas con `bcrypt` (`BCRYPT_ROUNDS` configurable).
+
+> ⚠️ **La mitigación de XSS por cookies httpOnly NO está activa hoy.** El backend las emite,
+> pero **el frontend guarda el token en `localStorage`** y lo manda como `Bearer`
+> (`App.jsx:25`), que es precisamente lo que un XSS puede leer. Además, el interceptor de 401
+> **cierra la sesión** en vez de refrescar, así que el access token no se puede acortar (hoy
+> 24h) mientras no se cablee el refresh en el frontend. Ver `PENDING_TASKS.md`.
+
+### El primer administrador
+
+El auto-registro crea **técnicos pendientes** y solo un admin puede aprobarlos: con cero
+admins, cada registro nace bloqueado y nadie puede desbloquearlo. Por eso `/api/auth/register`
+devuelve **409 `SYSTEM_NOT_INITIALIZED`** mientras no exista un admin activo, y el primer
+admin se crea con `bootstrap-admin.js` (exige acceso a la BD).
+
+**No se auto-promueve al primer registrado**: en un deploy público, quien descubra la URL
+antes que el dueño se quedaría de administrador.
 
 ### Secretos obligatorios
 
