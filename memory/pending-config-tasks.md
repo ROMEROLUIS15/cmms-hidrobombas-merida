@@ -19,16 +19,18 @@ admin (#54), validación real de la API key de Groq (#55), import de MemoryVecto
 - `HUGGINGFACEHUB_API_KEY`: seteada en Vercel (Production). Permiso necesario en el
   token fine-grained: **solo "Make calls to Inference Providers"**.
 - IA verificada end-to-end en prod: chat, diagnóstico y RAG responden.
+- **`REDIS_URL`**: Upstash provisionado y conectado; rate limiting ya es **global**.
+  Conectarlo tumbó producción y hubo que arreglar el store (PR #58). Ver
+  [[upstash-redis-rate-limit]].
+- **`JWT_SECRET` y `REFRESH_TOKEN_SECRET` rotados** (Production+Preview, 64 bytes
+  aleatorios, distintos entre sí, generados sin imprimirlos). El `backend/.env` local
+  **ya NO abre producción** (verificado: un token firmado en local da "Invalid token").
+  Efecto colateral: desde local ya no se pueden firmar tokens para probar endpoints
+  autenticados de prod — hay que loguearse en la web.
 
 **Pendiente de CONFIGURACIÓN (no es código):**
-1. **REDIS_URL:** el rate-limit compartido sigue **inerte** hasta provisionar Redis
-   (Upstash free → pestaña Storage del proyecto backend, o `REDIS_URL` por CLI).
-   Ojo: el rate limit ya funciona por IP desde #53, pero en serverless el MemoryStore
-   es por-instancia. Ver [[vercel-deploy-reference]].
-2. **SMTP:** sigue roto. Regenerar la App Password de Gmail y confirmar las `SMTP_*`
-   de prod. Ver [[smtp-credentials-broken]].
-3. **`JWT_SECRET` local == producción.** Se comprobó firmando un token local que prod
-   aceptó. `backend/.env` abre producción: rotar y usar secretos distintos por entorno.
+1. **SMTP:** lo único que sigue roto. Regenerar la App Password de Gmail y confirmar las
+   `SMTP_*` de prod. Ver [[smtp-credentials-broken]].
 
 **Pendiente de CÓDIGO (requieren decisión):**
 - **`@langchain/classic` es dependencia TRANSITIVA**, no declarada en `package.json`,

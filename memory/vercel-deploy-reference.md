@@ -19,7 +19,9 @@ directorio raíz quedó **linkeado** al proyecto backend (`.vercel/`, gitignored
 `DB_STORAGE`, todas las `SMTP_*` y varias `SEED_*`. Añadidas el 2026-07-12/13:
 **`GROQ_API_KEY`** (rotada; la vieja estaba revocada) y **`HUGGINGFACEHUB_API_KEY`**.
 `GROQ_MODEL` NO existe a propósito: así manda el default del código (`openai/gpt-oss-120b`).
-**NO existe `REDIS_URL`** todavía (ver [[pending-config-tasks]]).
+El 2026-07-13 se rotaron **`JWT_SECRET`** y **`REFRESH_TOKEN_SECRET`** (ya NO coinciden con
+`backend/.env`) y se conectó Upstash, que inyecta **`REDIS_URL`** + `KV_*`
+(ver [[upstash-redis-rate-limit]]).
 
 ⚠️ `DATABASE_URL` estuvo apuntando a una **BD vacía y equivocada** hasta el 2026-07-12;
 corregida en Production y Preview. Ver [[prod-neon-database]].
