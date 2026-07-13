@@ -1,6 +1,10 @@
 # Deuda Técnica — CMMS Hidrobombas Mérida
 
-Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-06-24**.
+Registro de limitaciones conocidas y trabajo pendiente. Última verificación: **2026-07-13**.
+
+> 📋 **El checklist accionable está en [`PENDING_TASKS.md`](PENDING_TASKS.md)**, con la
+> evidencia (archivo:línea) de cada punto. Este documento explica el **porqué**; aquel dice
+> **qué hacer**. Si te contradicen, gana el que tenga la verificación más reciente.
 
 ---
 
@@ -173,3 +177,42 @@ test estaba **codificando el bug**.
 **Contexto relacionado:** el `pdfService.js` ya soporta hasta **3 bombas**, pero `initialData` solo define `pump_1` y `pump_2` (falta `pump_3_on_minutes`/`_rest_minutes`/`_noise_db` + su UI en `Step11CiclosRuido.jsx`). Mismo criterio: agregar la 3ª bomba si la planilla la contempla.
 
 **Nota:** no es pérdida de datos (los campos nunca se llenan), es deuda de consistencia entre el formulario, el modelo y el PDF. Verificado por inspección del wizard, controller y render real del PDF el 2026-06-17.
+
+---
+
+## 5. Purga de tokens — la función existe pero NADIE la llama
+
+**Verificado 2026-07-13:** `purgeExpiredRevokedTokens()` está implementada en
+`backend/src/utils/tokenRevocation.js:40` y exportada… pero **no la invoca ningún archivo**.
+Es una función muerta. Consecuencia: la tabla `revoked_tokens` **crece sin límite** (cada
+logout añade una fila que no se borra nunca).
+
+`password_reset_tokens` solo se limpia para el usuario que pide un reset nuevo
+(`passwordController.js:34`); los caducados de otros usuarios se quedan.
+
+**No es urgente** (el volumen es bajo), pero es basura que se acumula y afecta al coste y al
+rendimiento con el tiempo.
+
+**Opciones:** `pg_cron` en Neon, un Vercel Cron que llame a un endpoint protegido, o purgar
+de forma oportunista (p. ej. en cada login, con probabilidad baja).
+
+---
+
+## 6. `emailService` NO tiene failover — "el primero configurado gana"
+
+**Verificado 2026-07-13** (`backend/src/services/emailService.js:115`):
+
+```js
+const provider = hasSMTP ? 'smtp' : hasBrevo ? 'brevo' : 'resend';
+```
+
+Si SMTP está configurado **y falla**, el servicio devuelve el error y **NO intenta** Brevo ni
+Resend. El diseño multi-proveedor no aporta redundancia: solo elige uno al arrancar.
+
+**Esto ya nos mordió:** con `SMTP_USER` apuntando a una cuenta equivocada, **todos** los
+correos fallaban durante semanas — pese a que `RESEND_API_KEY` estaba configurada y habría
+funcionado. Ver #2.
+
+**Arreglo:** intentar los proveedores en cascada ante un fallo de envío (no ante un fallo de
+configuración), con log de cada intento. Ojo con no reintentar errores permanentes (p. ej.
+destinatario inválido): solo tiene sentido ante fallos del proveedor.
