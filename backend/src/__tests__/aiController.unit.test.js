@@ -10,8 +10,14 @@ jest.mock('../ai/streaming', () => ({
   streamQuestion: jest.fn(),
 }));
 
+// Sin mock, aiStatus saldría a la red real de Groq en cada test.
+jest.mock('../ai/health', () => ({
+  checkGroqKey: jest.fn(),
+}));
+
 const { askQuestion, chat, diagnose, reindexReports } = require('../ai');
 const { streamChat, streamQuestion } = require('../ai/streaming');
+const { checkGroqKey } = require('../ai/health');
 const {
   aiAsk,
   aiChat,
@@ -297,6 +303,9 @@ describe('AI Controller Unit Tests', () => {
     beforeEach(() => {
       originalGroqKey = process.env.GROQ_API_KEY;
       originalHfKey = process.env.HUGGINGFACEHUB_API_KEY;
+      // Por defecto, credencial buena. Los casos de key revocada / geo-bloqueo
+      // se cubren abajo y en aiHealth.unit.test.js.
+      checkGroqKey.mockResolvedValue({ status: 'valid', detail: null });
     });
 
     afterEach(() => {
@@ -326,6 +335,8 @@ describe('AI Controller Unit Tests', () => {
         success: true,
         data: {
           groq_configured: true,
+          groq_key_status: 'valid',
+          groq_key_detail: null,
           huggingface_configured: true,
           llm_provider: 'Groq (openai/gpt-oss-120b)',
           embeddings_provider: 'HuggingFace (all-MiniLM-L6-v2)',
@@ -333,6 +344,31 @@ describe('AI Controller Unit Tests', () => {
           langgraph_agents: ['assistantGraph', 'diagnosticGraph'],
         },
       });
+    });
+
+    it('delata una key presente pero REVOCADA (el caso que mintió en producción)', async () => {
+      process.env.GROQ_API_KEY = 'gsk_revocada';
+      checkGroqKey.mockResolvedValue({
+        status: 'invalid',
+        detail: 'Groq rechaza la API key (401). Regenérala en console.groq.com/keys.',
+      });
+
+      await aiStatus(req, res);
+
+      const { data } = res.json.mock.calls[0][0];
+      expect(data.groq_configured).toBe(true);   // la variable existe...
+      expect(data.groq_key_status).toBe('invalid'); // ...pero no sirve, y ahora se dice.
+      expect(data.groq_key_detail).toMatch(/401/);
+    });
+
+    it('no confunde el geo-bloqueo con una key inválida', async () => {
+      process.env.GROQ_API_KEY = 'gsk_quizas_buena';
+      checkGroqKey.mockResolvedValue({ status: 'unreachable', detail: 'Groq respondió 403...' });
+
+      await aiStatus(req, res);
+
+      const { data } = res.json.mock.calls[0][0];
+      expect(data.groq_key_status).toBe('unreachable');
     });
 
     it('should reflect unconfigured providers when API keys are absent', async () => {
