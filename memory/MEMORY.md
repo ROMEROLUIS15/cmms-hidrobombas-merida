@@ -7,7 +7,7 @@
 - [npm workspaces: lock raíz](npm-workspaces-root-lock.md) — monorepo workspaces; el único lock que cuenta es el raíz; auditar con `npm audit` ahí, no por la lista de Dependabot
 - [npm audit sin fix seguro](npm-audit-no-safe-fix.md) — las ~28 vulns son dev-only / LangChain / sequelize→uuid no explotable; NO correr `audit fix --force`
 - [Clean install falla con ERESOLVE](clean-install-eresolve.md) — no borrar el lock para reinstalar; un install desde cero se cae por peer-deps; usar `--legacy-peer-deps` si hace falta
-- [SMTP local roto](smtp-credentials-broken.md) — la App Password de Gmail del .env está rechazada (535); prod tiene SMTP_* propias sin verificar; regenerar
+- [SMTP: el 535 no era la clave](smtp-credentials-broken.md) — RESUELTO; la App Password siempre fue válida, `SMTP_USER` apuntaba a otra cuenta. Ante un 535, mirar la CUENTA antes que la clave
 - [Referencia de deploy Vercel](vercel-deploy-reference.md) — proyectos (backend=cmms-hidrobombas-merida-backend), `npx vercel` linkeado, env vars de prod; usar `vercel redeploy`, nunca `--prod` desde local
 - [Tareas de config pendientes](pending-config-tasks.md) — estado tras poner prod en marcha (2026-07-13); ya solo queda el SMTP
 - [Upstash Redis (rate limiting)](upstash-redis-rate-limit.md) — cómo está montado; conectarlo tumbó producción (500 en todos los logins): un fallo del store NO debe matar la API

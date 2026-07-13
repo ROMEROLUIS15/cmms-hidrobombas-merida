@@ -39,23 +39,35 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 
 **Limpieza menor:** ahora `nodemailer` SÍ se usa (proveedor SMTP). Si en el futuro se fija un único proveedor, eliminar los no usados (`resend` y/o `nodemailer`) en un cambio aparte (evitar churn del lockfile — ver item 3).
 
-**Actualización 2026-06-24 — verificación en vivo realizada: SMTP RECHAZADO.**
-Se probó `transporter.verify()` contra Gmail con las credenciales del `.env`
-(`hidrobombasmerida@gmail.com` + la App Password actual). Resultado: **`535-5.7.8
-Username and Password not accepted`**. Reproducido con la App Password **con
-espacios** (19 chars) y **sin espacios** (16 chars) → ambas rechazadas, así que
-NO es problema de formato: la App Password está **inválida/expirada/revocada**.
-- **Impacto:** con `SMTP_USER`/`SMTP_PASS` presentes, el servicio usa SMTP y
-  **no** cae a Resend si la auth falla (modelo "el primero configurado gana").
-  Aunque `RESEND_API_KEY` está puesta, hoy los correos de reporte/reset **fallan**.
-- **El código es correcto** (14 tests de email/PDF + 347 backend en verde); el
-  fallo es 100% de credencial.
-- **No verificado en Vercel:** las env vars de producción son independientes del
-  `.env` local; no se pudo comprobar desde aquí.
-- **Arreglo (NO es código):** regenerar la App Password en
-  `myaccount.google.com/apppasswords` (con verificación en 2 pasos activa) y
-  setearla en `.env` y en Vercel. Alternativa: activar Resend quitando
-  `SMTP_USER`/`SMTP_PASS` (pero sin dominio propio solo envía al dueño de la cuenta).
+**✅ RESUELTO el 2026-07-13 — y la causa NO era la que se creía.**
+
+Durante semanas se dio por hecho que la App Password estaba **revocada**, porque Gmail
+devolvía `535-5.7.8 Username and Password not accepted` (`?p=BadCredentials`).
+**Era falso: la clave siempre fue válida.**
+
+El fallo real: **`SMTP_USER` apuntaba a `hidrobombasmerida@gmail.com`** (sin punto, sin
+1948), mientras la App Password pertenecía a **`hidrobombas.merida1948@gmail.com`** — otra
+cuenta. Con la MISMA contraseña de siempre y el usuario correcto: `AUTH OK`.
+
+Corregidos `SMTP_USER`/`SMTP_FROM` en `backend/.env` y en Vercel (Production y Preview).
+**Verificado con un envío real desde producción**: `POST /api/auth/forgot-password` → log
+`password reset email enviado, provider: smtp, messageId: <…@gmail.com>`. Los correos de
+reporte en PDF y de reset de contraseña funcionan.
+
+**Por qué costó tanto (lecciones):**
+- `535 BadCredentials` suena a "contraseña incorrecta", pero significa "esta
+  **combinación** de usuario y contraseña no autentica". Al leerlo como un problema de la
+  clave, la investigación se fue tras hipótesis falsas: el formato con/sin espacios
+  (irrelevante — **autentica de las dos formas**), si el 2FA estaba activo, y si Google
+  había cambiado su política (**no la ha cambiado**: las App Passwords con 2FA siguen
+  siendo el mecanismo válido para SMTP). Nadie miró el `SMTP_USER`.
+- **Ante un 535: verificar primero la CUENTA, no la clave.**
+- El código de email siempre fue correcto (14 tests de email/PDF en verde); el fallo era
+  100% de configuración.
+
+**Sigue vigente:** no hay failover — con `SMTP_USER`/`SMTP_PASS` presentes el servicio usa
+SMTP y **no** cae a Resend si la auth falla ("el primero configurado gana"). Las `SMTP_*`
+de Vercel son *Sensitive*: no se pueden leer, solo sobrescribir.
 
 ---
 
