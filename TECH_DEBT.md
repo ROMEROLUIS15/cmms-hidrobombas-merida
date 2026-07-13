@@ -103,7 +103,7 @@ de Vercel son *Sensitive*: no se pueden leer, solo sobrescribir.
 
 ---
 
-## 3.5 ⚠️ La suite pasa en verde con producción rota — DEUDA MÁS IMPORTANTE
+## 3.5 ✅ La suite pasaba en verde con producción rota — RESUELTO (CI contra Postgres)
 
 **Qué pasó (2026-07-13):** con **384 tests en verde**, ejercitar el flujo real contra
 producción destapó ~6 bugs, uno de ellos crítico: **crear un equipo fallaba SIEMPRE**
@@ -129,13 +129,33 @@ UUID**; Postgres sí. Todo lo que dependa de eso pasa el CI y revienta solo en p
 Un test que afirma lo que el código **hace** (en vez de lo que **debería** hacer) no prueba
 nada: convierte el bug en contrato y lo blinda contra el arreglo.
 
-**Decisión pendiente:** correr los **tests de integración contra Postgres en el CI**
-(servicio `postgres` en GitHub Actions). La paridad con SQLite es cómoda para desarrollar,
-pero esconde justo esta clase de fallos. Mientras tanto: **verificar contra producción, no
-contra la suite.**
+**✅ RESUELTO (PR #69):** el CI corre ahora la suite **también contra un PostgreSQL real**
+(job `backend-tests-postgres`, servicio `postgres:16`). Se **mantiene** el job de SQLite
+(48s, feedback rápido); el de Postgres (1m13s) es la red de seguridad.
 
-Mitigación ya aplicada: los enums tienen ahora una **única fuente de verdad en el modelo**
-(`EQUIPMENT_STATUSES`, `VISIT_TYPES`), que controladores y validadores Zod importan.
+**Cazó un bug a la primera:** `updateUserRole` hacía `user.role = req.body.role || ...`
+**sin validar** → cualquier string llegaba a la BD y Postgres devolvía un 500 en vez de un
+400. Y los tests usaban `role: 'user'`, un rol que **ni existe** (el enum es
+`admin|supervisor|technician|client`); uno afirmaba `expect(role).toBe('user')`.
+
+**Lo que hubo que destrabar** (estaba todo en contra):
+1. `jest.setupEnv.js` forzaba `DATABASE_URL=''` → era IMPOSIBLE apuntar la suite a Postgres.
+2. `config/database.js` inyectaba el driver WebSocket de Neon + TLS obligatorio, que un
+   Postgres local no puede dar. Ahora detecta el host local y usa `pg` estándar.
+3. `sync({force:true})` recrea las tablas pero **deja los tipos ENUM** → `type "..." does
+   not exist`. Se parte de un schema vacío (`DROP SCHEMA public CASCADE`).
+   ⚠️ Ese DROP borra la base entera: `setup.js` se **niega** a ejecutarlo si el nombre de la
+   base no contiene `test` (evita cargarse producción por un `DATABASE_URL` mal puesto).
+4. `--runInBand` obligatorio: los workers comparten la única BD y se borrarían las tablas
+   entre ellos (con SQLite en memoria cada worker tiene la suya).
+
+**Mitigación estructural:** los enums tienen ya una **única fuente de verdad en el modelo**
+(`EQUIPMENT_STATUSES`, `VISIT_TYPES`, `USER_ROLES`), que controladores y validadores Zod
+importan en vez de redeclarar.
+
+**Sigue vigente:** un test que afirma lo que el código **hace** (en vez de lo que **debería**
+hacer) no prueba nada. Ante un test que falla al arreglar algo, preguntarse siempre si el
+test estaba **codificando el bug**.
 
 ---
 

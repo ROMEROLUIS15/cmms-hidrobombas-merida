@@ -35,14 +35,30 @@ Cuatro casos reales en una sola sesión:
 prueba nada; convierte el bug en contrato y lo blinda contra el arreglo. Un mock que
 inventa la API que dice verificar, tampoco.
 
+## ✅ Arreglado: el CI corre también contra Postgres (PR #69)
+
+Job `backend-tests-postgres` (servicio `postgres:16`, `--runInBand`). Se **mantiene** el de
+SQLite (48s, feedback rápido); el de Postgres (1m13s) es la red de seguridad.
+**Cazó un bug a la primera:** `updateUserRole` no validaba el rol → 500 en vez de 400, y los
+tests usaban `role: 'user'`, que ni existe (`admin|supervisor|technician|client`).
+
+Correr la suite contra Postgres exigió destrabar tres cosas, por si hay que tocarlo:
+1. `jest.setupEnv.js` forzaba `DATABASE_URL=''` → imposible apuntar a Postgres. Ahora
+   respeta la del entorno.
+2. `config/database.js` inyectaba el driver **WebSocket de Neon** + TLS obligatorio, que un
+   Postgres local no da. Detecta host local (`localhost`/`127.0.0.1`) → `pg` estándar sin TLS.
+3. `sync({force:true})` recrea las tablas pero **deja los tipos ENUM** (`type "..." does not
+   exist`). `setup.js` parte de un schema vacío con `DROP SCHEMA public CASCADE`.
+   ⚠️ **Ese DROP borra la base entera:** hay una salvaguarda que se NIEGA a ejecutarlo si el
+   nombre de la base no contiene `test`. No quitarla.
+
+Nota: **validar esto en local contra Neon no funciona** (lentísimo y usa el driver WS, que no
+es lo que corre el CI). Usar el propio PR como banco de pruebas.
+
 **How to apply:**
-- **Verificar contra PRODUCCIÓN, no contra la suite.** Todos estos bugs aparecieron al
-  ejercitar el flujo real (login → cliente → equipo → reporte → PDF → email → IA).
-  Ninguno lo detectó el CI.
-- Ante un test que falla al arreglar algo: preguntarse si el test estaba **codificando
-  el bug** antes de "arreglar" el código para que pase.
-- **Pendiente de decisión:** correr los tests de integración contra Postgres en el CI
-  (p. ej. un servicio postgres en GitHub Actions). La paridad SQLite es cómoda pero
-  esconde justo esta clase de fallos. Ver [[pending-config-tasks]].
-- Enums: el **modelo** es la única fuente de verdad; controladores y validadores Zod
-  deben importar sus valores, nunca redeclararlos.
+- **Verificar contra PRODUCCIÓN, no solo contra la suite.** Los bugs aparecieron al ejercitar
+  el flujo real (login → cliente → equipo → reporte → PDF → email → IA).
+- Ante un test que falla al arreglar algo: preguntarse si el test estaba **codificando el
+  bug** antes de "arreglar" el código para que pase.
+- Enums: el **modelo** es la única fuente de verdad (`EQUIPMENT_STATUSES`, `VISIT_TYPES`,
+  `USER_ROLES`); controladores y validadores Zod los importan, nunca los redeclaran.

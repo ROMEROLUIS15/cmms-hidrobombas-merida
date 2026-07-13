@@ -42,10 +42,11 @@ admin (#54), validación real de la API key de Groq (#55), import de MemoryVecto
 verificada en vivo (BD, admin, IA, RAG, rate limiting, secretos, email).
 
 **Pendiente de CÓDIGO (requieren decisión):**
-- **⚠️ Tests en verde con producción rota.** El hallazgo más importante de la sesión: al
-  ejercitar el flujo real contra prod aparecieron ~6 bugs que el CI no vio (crear un
-  equipo fallaba SIEMPRE). Decisión pendiente: **correr los tests de integración contra
-  Postgres en el CI**. Ver [[tests-verde-produccion-rota]].
+- **✅ Tests en verde con producción rota → RESUELTO (PR #69).** El CI corre ya la suite
+  también contra un **Postgres real** (además del job de SQLite, que se mantiene por
+  rapidez). Cazó un bug a la primera: `updateUserRole` no validaba el rol. No quitar la
+  salvaguarda que impide el `DROP SCHEMA` sobre una base que no se llame *test*.
+  Ver [[tests-verde-produccion-rota]].
 - **`@langchain/classic` es dependencia TRANSITIVA**, no declarada en `package.json`,
   y de ella depende el RAG (`MemoryVectorStore`). Declararla explícita toca el lock →
   hacerlo aislado y verificado en preview. Ver [[langchain-deps-fragile-prod]].
