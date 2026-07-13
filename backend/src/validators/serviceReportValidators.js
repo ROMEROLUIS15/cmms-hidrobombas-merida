@@ -1,4 +1,11 @@
 const { z } = require('zod');
+const { VISIT_TYPES } = require('../models/ServiceReport');
+
+// El tipo de visita sale del MODELO (única fuente de verdad, alineada con el
+// enum de Postgres). Antes esto era `z.string().max(50)`: cualquier valor
+// pasaba la validación, llegaba a la BD y Postgres lo rechazaba con un
+// `invalid input value for enum` → el usuario recibía un 500 en vez de un 400.
+const visitTypeSchema = z.enum(VISIT_TYPES);
 
 /**
  * serviceReportValidators — usa snake_case para coincidir con el contrato
@@ -10,7 +17,7 @@ const { z } = require('zod');
 
 const createServiceReportSchema = z.object({
   equipment_id: z.string().uuid('equipment_id debe ser un UUID válido').optional(),
-  visit_type: z.string().trim().max(50).optional(),
+  visit_type: visitTypeSchema.optional(),
   system_name: z.string().trim().max(200).optional(),
   report_date: z.string().optional(),
   technician_name: z.string().trim().max(200).optional(),
@@ -30,7 +37,7 @@ const createServiceReportSchema = z.object({
 });
 
 const updateServiceReportSchema = z.object({
-  visit_type: z.string().trim().max(50).optional(),
+  visit_type: visitTypeSchema.optional(),
   system_name: z.string().trim().max(200).optional(),
   report_date: z.string().optional(),
   technician_name: z.string().trim().max(200).optional(),

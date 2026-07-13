@@ -190,10 +190,13 @@ describe('ServiceReport Routes Integration Tests', () => {
       });
 
       // Act
+      // OJO: este test enviaba visit_type:'semestral', que NO existe en
+      // enum_service_reports_visitType. Pasaba solo porque SQLite no valida los
+      // ENUM; contra Postgres habría sido un 500. Se usa un tipo real.
       const response = await request(app)
         .put(`/api/service-reports/${report.id}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ observations: 'Updated observations', visit_type: 'semestral' })
+        .send({ observations: 'Updated observations', visit_type: 'eventual' })
         .expect(200);
 
       // Assert

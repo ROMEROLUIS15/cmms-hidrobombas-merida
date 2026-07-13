@@ -2,6 +2,15 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 /**
+ * ÚNICA fuente de verdad de los tipos de visita. Deben coincidir con el enum
+ * `enum_service_reports_visitType` de Postgres. El validador Zod los importa de
+ * aquí: si acepta cualquier string, un valor inválido llega a la BD y Postgres
+ * responde con un 500 en vez de un 400 limpio.
+ */
+const VISIT_TYPES = ['mensual', 'eventual', 'technical'];
+const DEFAULT_VISIT_TYPE = 'mensual';
+
+/**
  * ServiceReport — Reporte de Mantenimiento
  *
  * Almacena todos los datos de la hoja física de Hidrobombas Mérida.
@@ -27,8 +36,8 @@ const ServiceReport = sequelize.define('ServiceReport', {
     allowNull: false
   },
   visitType: {
-    type: DataTypes.ENUM('mensual', 'eventual', 'technical'),
-    defaultValue: 'mensual',
+    type: DataTypes.ENUM(...VISIT_TYPES),
+    defaultValue: DEFAULT_VISIT_TYPE,
     allowNull: false
   },
   systemName: {
@@ -119,3 +128,5 @@ const ServiceReport = sequelize.define('ServiceReport', {
 });
 
 module.exports = ServiceReport;
+module.exports.VISIT_TYPES = VISIT_TYPES;
+module.exports.DEFAULT_VISIT_TYPE = DEFAULT_VISIT_TYPE;
