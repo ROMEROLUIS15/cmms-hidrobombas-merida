@@ -2,7 +2,12 @@
 /** @typedef {import('@langchain/core/embeddings').Embeddings} Embeddings */
 /** @typedef {import('@langchain/core/documents').Document} Document */
 
-const { MemoryVectorStore } = require('@langchain/core/vectorstores');
+// OJO con la ruta: `@langchain/core/vectorstores` solo exporta la clase BASE
+// (VectorStore). En LangChain v1 la implementación en memoria se movió a
+// `@langchain/classic`. Importarla del sitio equivocado no falla al cargar el
+// módulo: revienta en runtime con "MemoryVectorStore is not a constructor" la
+// primera vez que alguien usa el RAG. Pasó en producción (2026-07-13).
+const { MemoryVectorStore } = require('@langchain/classic/vectorstores/memory');
 const { container } = require('./container');
 const { ServiceReport, Equipment } = require('../models');
 const { logger } = require('../utils/logger');

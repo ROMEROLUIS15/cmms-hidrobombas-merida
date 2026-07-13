@@ -1,4 +1,9 @@
-jest.mock('@langchain/core/vectorstores', () => {
+// La ruta del mock DEBE ser la misma que importa vectorStoreProvider.
+// Antes se mockeaba '@langchain/core/vectorstores' inventando un
+// `MemoryVectorStore` que ese módulo NUNCA ha exportado (solo tiene la clase
+// base). El mock hacía pasar por bueno un import roto, y el fallo solo aparecía
+// en runtime: "MemoryVectorStore is not a constructor". Reventó en producción.
+jest.mock('@langchain/classic/vectorstores/memory', () => {
   const mockMemoryVectorStore = jest.fn().mockImplementation(() => ({
     addDocuments: jest.fn().mockResolvedValue(undefined),
     similaritySearch: jest.fn().mockResolvedValue([]),
