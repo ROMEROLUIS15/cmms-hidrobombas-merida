@@ -135,7 +135,12 @@ const pgvectorProvider = {
     this._store = await PGVectorStore.initialize(embeddings, {
       postgresConnectionOptions: {
         connectionString: databaseUrl,
-        ssl: { rejectUnauthorized: false },
+        // Verificamos la cadena TLS, igual que `config/database.js` (que se
+        // endureció justo por esto). Con `false` se acepta cualquier
+        // certificado y la conexión a la BD queda expuesta a un MITM — y este
+        // proveedor habla con la MISMA base que Sequelize protege. Neon emite
+        // certificados de una CA pública, así que la verificación pasa.
+        ssl: { rejectUnauthorized: true },
       },
       tableName: PGVECTOR_TABLE,
       distanceStrategy: 'cosine',
