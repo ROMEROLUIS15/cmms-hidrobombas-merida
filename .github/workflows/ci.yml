@@ -109,3 +109,64 @@ jobs:
           name: backend-coverage
           path: backend/coverage/
           if-no-files-found: ignore
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # La MISMA suite, pero contra PostgreSQL de verdad.
+  #
+  # El job de arriba corre contra SQLite: rápido, sin dependencias... y CIEGO.
+  # SQLite NO valida ENUM ni UUID; Postgres sí. Eso dejó llegar a producción bugs
+  # que la suite daba por buenos, entre ellos uno crítico: crear un equipo fallaba
+  # SIEMPRE (`invalid input value for enum enum_equipment_status: "active"`), y sin
+  # equipos no hay reportes de servicio. Ver TECH_DEBT #3.5.
+  #
+  # Este job es el que habría cazado esos fallos antes de mergear.
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend-tests-postgres:
+    name: Backend Tests (Jest + PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          # El nombre DEBE contener "test": src/__tests__/setup.js hace
+          # DROP SCHEMA y se niega a hacerlo sobre una base que no lo delate.
+          POSTGRES_DB: cmms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Inject Env Vars (PostgreSQL)
+        run: |
+          echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/cmms_test" >> $GITHUB_ENV
+          echo "JWT_SECRET=dummy_secret_ci_only" >> $GITHUB_ENV
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "BCRYPT_ROUNDS=1" >> $GITHUB_ENV
+          echo "JWT_EXPIRES_IN=1h" >> $GITHUB_ENV
+          echo "FRONTEND_URL=http://localhost:5000" >> $GITHUB_ENV
+
+      # --runInBand es OBLIGATORIO: los workers de Jest comparten esta única BD y
+      # el `sync({force:true})` de cada archivo borraría las tablas de los demás
+      # (con SQLite en memoria cada worker tiene la suya, por eso allí no pasa).
+      - name: Run Jest (Backend) against PostgreSQL
+        run: npm test -w backend -- --runInBand
