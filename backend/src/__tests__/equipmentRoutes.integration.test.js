@@ -93,7 +93,10 @@ describe('Equipment Routes Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe('New Pump');
-      expect(response.body.data.status).toBe('active');
+      // Este assert esperaba 'active', un valor que NO existe en el enum de
+      // Postgres. Pasaba porque los tests corren contra SQLite, que no valida
+      // los ENUM — y así el bug llegó a producción (500 en cada creación).
+      expect(response.body.data.status).toBe('Operativo');
     });
 
     it('should return 400 when name is missing', async () => {

@@ -81,7 +81,13 @@ const createEquipment = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Nombre y cliente son requeridos' });
   }
 
-  const eq = await Equipment.create({ name, type, serialNumber, brand, clientId, status: status || 'active' });
+  // El default lo pone el MODELO (DEFAULT_EQUIPMENT_STATUS). Antes aquí se
+  // forzaba `'active'`, que no existe en el enum de la BD: crear un equipo
+  // fallaba siempre con 500 en producción.
+  const eq = await Equipment.create({
+    name, type, serialNumber, brand, clientId,
+    ...(status ? { status } : {}),
+  });
   res.status(201).json({ success: true, data: eq });
 });
 
