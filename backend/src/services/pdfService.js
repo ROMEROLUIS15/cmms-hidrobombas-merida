@@ -124,8 +124,10 @@ const buildReportPDF = async (reportId) => {
      .text('HIDROBOMBAS MÉRIDA', 50, 50, { width: pw - 160 });
   doc.fontSize(8).font('Helvetica').fillColor('#93c5fd')
      .text('Servicio Técnico Especializado en Sistemas de Bombeo', 50, 68);
+  // OJO: RIF y teléfono siguen siendo PLACEHOLDERS y se imprimen en cada reporte
+  // que recibe un cliente. Sustituirlos por los datos reales de Hidrobombas.
   doc.fillColor('#bfdbfe').fontSize(7)
-     .text('RIF: J-XXXXXXXXX-X  •  Tel: +58 274 XXX-XXXX  •  hidrobombasmerida@gmail.com', 50, 80);
+     .text('RIF: J-XXXXXXXXX-X  •  Tel: +58 274 XXX-XXXX  •  hidrobombas.merida1948@gmail.com', 50, 80);
 
   // Report number box
   doc.rect(pw - 110, 45, 145, 52).fill('#1e40af');
