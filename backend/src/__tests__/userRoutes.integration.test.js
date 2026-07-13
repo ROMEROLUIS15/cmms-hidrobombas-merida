@@ -38,7 +38,7 @@ describe('User Routes Integration Tests', () => {
   describe('GET /api/users', () => {
     it('should return all users without passwords', async () => {
       const hashedPassword = await bcrypt.hash('password123', 10);
-      await User.create({ username: 'user1', email: 'user1@example.com', password: hashedPassword, role: 'user', isActive: true });
+      await User.create({ username: 'user1', email: 'user1@example.com', password: hashedPassword, role: 'technician', isActive: true });
       await User.create({ username: 'user2', email: 'user2@example.com', password: hashedPassword, role: 'admin', isActive: true });
 
       const response = await request(app)
@@ -70,7 +70,7 @@ describe('User Routes Integration Tests', () => {
         username: 'testuser',
         email: 'test@example.com',
         password: hashedPassword,
-        role: 'user',
+        role: 'technician',
         isActive: false
       });
 
@@ -89,7 +89,7 @@ describe('User Routes Integration Tests', () => {
         username: 'testuser',
         email: 'test@example.com',
         password: hashedPassword,
-        role: 'user',
+        role: 'technician',
         isActive: true
       });
 
@@ -114,13 +114,13 @@ describe('User Routes Integration Tests', () => {
   });
 
   describe('PUT /api/users/:id/role', () => {
-    it('should update user role from user to admin', async () => {
+    it('should update user role from technician to admin', async () => {
       const hashedPassword = await bcrypt.hash('password123', 10);
       const user = await User.create({
         username: 'testuser',
         email: 'test@example.com',
         password: hashedPassword,
-        role: 'user',
+        role: 'technician',
         isActive: true
       });
 
@@ -133,7 +133,7 @@ describe('User Routes Integration Tests', () => {
       expect(response.body.data.role).toBe('admin');
     });
 
-    it('should update user role from admin to user', async () => {
+    it('should update user role from admin to technician', async () => {
       const hashedPassword = await bcrypt.hash('password123', 10);
       const user = await User.create({
         username: 'testuser',
@@ -146,10 +146,32 @@ describe('User Routes Integration Tests', () => {
       const response = await request(app)
         .put(`/api/users/${user.id}/role`)
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ role: 'user' })
+        .send({ role: 'technician' })
         .expect(200);
 
-      expect(response.body.data.role).toBe('user');
+      expect(response.body.data.role).toBe('technician');
+    });
+
+    it('rechaza con 400 un rol inexistente (antes: 500 desde Postgres)', async () => {
+      // `'user'` NO es un rol válido — el enum es admin|supervisor|technician|client.
+      // Estos tests lo usaban y SQLite lo aceptaba; Postgres lo rechaza.
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      const user = await User.create({
+        username: 'rolecheck',
+        email: 'rolecheck@example.com',
+        password: hashedPassword,
+        role: 'technician',
+        isActive: true
+      });
+
+      const response = await request(app)
+        .put(`/api/users/${user.id}/role`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ role: 'user' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toMatch(/Rol inválido/);
     });
 
     it('should return 404 for non-existent user', async () => {
@@ -170,7 +192,7 @@ describe('User Routes Integration Tests', () => {
         username: 'testuser',
         email: 'test@example.com',
         password: hashedPassword,
-        role: 'user',
+        role: 'technician',
         isActive: true
       });
 

@@ -1,4 +1,5 @@
 const { User } = require('../models');
+const { USER_ROLES } = require('../models/User');
 const asyncHandler = require('express-async-handler');
 
 const validateUUID = (id) => {
@@ -55,10 +56,21 @@ const updateUserRole = asyncHandler(async (req, res) => {
     });
   }
 
+  // El rol NO se validaba: `user.role = req.body.role || user.role` aceptaba
+  // cualquier string. Contra Postgres eso revienta con `invalid input value for
+  // enum enum_users_role` y el cliente recibe un 500 en vez de un 400.
+  const { role } = req.body;
+  if (role !== undefined && !USER_ROLES.includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: `Rol inválido. Valores permitidos: ${USER_ROLES.join(', ')}`
+    });
+  }
+
   const user = await getUserById(id);
 
   if (user) {
-    user.role = req.body.role || user.role;
+    user.role = role || user.role;
     const updatedUser = await user.save();
     const { password: _password, ...safeUser } = updatedUser.toJSON();
     res.json({ success: true, data: safeUser });
