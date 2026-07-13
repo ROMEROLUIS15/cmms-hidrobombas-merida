@@ -336,16 +336,47 @@ chore: actualizar dependencias de seguridad
 
 ## 7. Deuda Técnica Conocida
 
-✅ **Todo resuelto** - La deuda técnica ha sido implementada:
+⚠️ Este apartado decía *"todo resuelto"*. **No lo estaba.** El checklist real y verificado
+vive en [`PENDING_TASKS.md`](PENDING_TASKS.md) y el porqué de cada punto en
+[`TECH_DEBT.md`](TECH_DEBT.md). Resumen:
 
-| Item | Prioridad | Estado | Implementación |
-|------|-----------|--------|----------------|
-| Email en reset password | 🔴 Alta | ✅ Resuelto | `src/services/emailService.js` usa nodemailer con SMTP configurable |
-| JWT en httpOnly cookies | 🟡 Media | ✅ Resuelto | Backend acepta JWT via cookie o header Authorization. Incluye refresh tokens de 7 días |
-| Idempotencia backend | 🟡 Media | ✅ Resuelto | Middleware `idempotencyMiddleware.js` crea tabla `idempotency_keys` con TTL 24h |
-| Tests E2E | 🟡 Media | ✅ Resuelto | Playwright configurado con tests en `e2e/auth.spec.js`. Ejecutar `npm run test:e2e` |
-| Paginación | 🟢 Baja | ✅ Resuelto | Endpoints `/api/clients`, `/api/equipment`, `/api/service-reports` ahora aceptan `?page=1&limit=10` |
+| Item | Estado |
+|------|--------|
+| Idempotencia, paginación, E2E con Playwright | ✅ Resuelto |
+| Email de reset (SMTP) | ✅ Funciona… pero **sin failover**: si el proveedor elegido falla, no intenta los demás |
+| JWT en cookies httpOnly | ⚠️ El **backend** las emite, pero el **frontend sigue usando `localStorage`** y el interceptor de 401 cierra sesión en vez de refrescar |
+| Purga de tokens caducados | ❌ La función existe pero **nadie la llama** |
+| Política de contraseñas | ❌ Solo `min(8)` |
+| Campos huérfanos del wizard | ❌ 6 campos sin UI que los capture |
 
 ---
 
-*Última actualización: Mayo 2026*
+## 8. Lecciones aprendidas (2026-07-13) — leer antes de tocar nada
+
+Producción pasó de **rota a funcional** en una sola sesión. Lo que quedó grabado:
+
+**La suite mentía.** Con 384 tests en verde, el CMMS tenía ~6 bugs que lo hacían
+inutilizable — entre ellos, **crear un equipo fallaba siempre**. Dos causas estructurales:
+
+1. **SQLite no valida ENUM ni UUID; Postgres sí.** Los tests corrían solo contra SQLite.
+   → Arreglado: el CI ejecuta la suite **también contra un Postgres real** (§ Testing del README).
+2. **Los tests codificaban los bugs.** Un mock que fabricaba una clase inexistente; un
+   `expect(status).toBe('active')` con un valor que la BD rechaza; un `visit_type:'semestral'`
+   que no existe; un `toHaveBeenCalledWith('/api/ai/chat')` con una ruta relativa que en
+   producción daba 405. *Un test que afirma lo que el código **hace** —en vez de lo que
+   **debería** hacer— convierte el bug en contrato.*
+
+**Regla que sale de ahí:** los enums tienen **una única fuente de verdad en el modelo**
+(`EQUIPMENT_STATUSES`, `VISIT_TYPES`, `USER_ROLES`); controladores y validadores Zod los
+**importan**, nunca los redeclaran. Tres de los bugs venían de listas duplicadas y divergentes.
+
+**El rate limiting es una protección, no una dependencia crítica.** Conectar Redis tumbó
+producción (500 en todos los logins) porque `express-rate-limit` propaga los errores del store.
+Ahora degrada a memoria si Redis falla (`config/rateLimitStore.js`).
+
+**Frontend y backend son dominios distintos.** Toda llamada debe ser absoluta vía
+`VITE_API_URL`. Una ruta relativa va contra el hosting estático y devuelve 405.
+
+---
+
+*Última actualización: 2026-07-13*

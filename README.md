@@ -181,12 +181,19 @@ BCRYPT_ROUNDS=10
 # CORS
 FRONTEND_URL=http://localhost:5000
 
+# Rate limiting (opcional, pero MUY recomendado en serverless)
+# Sin REDIS_URL el conteo es por-instancia (cada lambda tiene su memoria) y el
+# límite real es mucho más débil de lo que sugiere la config.
+REDIS_URL=rediss://default:TOKEN@tu-endpoint.upstash.io:6379
+
 # IA (opcional)
 GROQ_API_KEY=gsk_...
 GROQ_MODEL=openai/gpt-oss-120b
 AI_RATE_LIMIT_MAX=30
 HUGGINGFACEHUB_API_KEY=hf_...
-VECTOR_STORE_PROVIDER=memory
+# "memory" (RAM, se pierde en cada cold start) | "pgvector" (persistente en Postgres)
+# En PRODUCCIÓN se usa pgvector: requiere `CREATE EXTENSION vector` en la BD.
+VECTOR_STORE_PROVIDER=pgvector
 
 # Seed (npm run seed:dummy)
 SEED_ADMIN_EMAIL=admin@hidrobombasmerida.com
@@ -195,9 +202,20 @@ SEED_TECH_EMAIL=tecnico@hidrobombasmerida.com
 SEED_TECH_PASSWORD=...
 ```
 
+El **frontend** tiene su propia variable (Vite la inyecta en tiempo de build):
+
+```env
+# frontend/.env — DEBE apuntar al backend: son dominios distintos en producción.
+VITE_API_URL=https://tu-backend.vercel.app
+```
+
 > Si `DATABASE_URL` está presente se usa PostgreSQL; si no, SQLite.
 >
 > ⚠️ **Producción:** `REFRESH_TOKEN_SECRET` es obligatorio. El backend **aborta el arranque** si falta (evita derivar un secreto predecible de `JWT_SECRET`).
+>
+> ⚠️ **Nunca uses rutas relativas (`/api/...`) en el frontend.** El frontend es un hosting
+> estático en otro dominio: un `POST` relativo va contra sí mismo y devuelve **405**. Eso
+> dejó el asistente de IA inservible hasta que se detectó.
 
 ---
 
@@ -225,10 +243,19 @@ Todas las rutas (salvo login/registro/recuperación y health) requieren `Authori
 | Método | Ruta | Descripción | Acceso |
 |--------|------|-------------|--------|
 | `POST` | `/login` | Iniciar sesión | Público |
-| `POST` | `/register` | Registrar técnico (queda **pendiente**; requiere aprobación de un admin antes de poder iniciar sesión) | Público |
+| `POST` | `/register` | Registrar técnico (queda **pendiente**; requiere aprobación de un admin). **Devuelve 409 si aún no existe ningún admin** — ver abajo | Público |
+| `GET` | `/bootstrap-status` | `{ needsBootstrap, registrationOpen }` — si el sistema está inicializado | Público |
 | `GET` | `/profile` | Perfil actual | Autenticado |
 | `POST` | `/refresh` | Renovar tokens (rota access + refresh) | Cookie refresh |
 | `POST` | `/forgot-password` · `/reset-password` | Recuperación de contraseña | Público |
+
+> **El primer admin NO se crea por la web.** El auto-registro siempre produce técnicos
+> *pendientes de aprobación*, y solo un admin puede aprobarlos: con cero admins, cada
+> registro nace bloqueado y nadie puede desbloquearlo. Por eso `/register` responde **409
+> `SYSTEM_NOT_INITIALIZED`** mientras no exista un admin activo.
+> El primer admin se crea con `cd backend && node bootstrap-admin.js` (exige acceso a la BD).
+> Deliberadamente **no** se auto-promueve al primer registrado: en un deploy público,
+> cualquiera que llegue antes que el dueño se quedaría de administrador.
 
 ### Clientes — `/api/clients` · Equipos — `/api/equipment`
 | Método | Ruta | Descripción | Acceso |
@@ -278,14 +305,31 @@ La lógica de ownership vive en `backend/src/utils/ownership.js` y se aplica en 
 
 ```bash
 # Backend (Jest + Supertest)
-cd backend && npm test                 # 322+ tests (unit + integración)
+cd backend && npm test                 # 385 tests (unit + integración)
 cd backend && npm run test:coverage    # con cobertura
 
 # Frontend (Vitest + Testing Library)
-cd frontend && npm run test:run
+cd frontend && npm run test:run        # 77 tests
 ```
 
-Los tests del backend corren contra **SQLite** para aislamiento, velocidad y reproducibilidad. El pipeline de CI (`.github/workflows/ci.yml`) ejecuta lint, `npm audit`, y los tests de ambos workspaces con cobertura.
+### ⚠️ La suite corre contra DOS bases de datos, y no es un capricho
+
+El CI (`.github/workflows/ci.yml`) ejecuta la suite del backend **dos veces**:
+
+| Job | BD | Papel |
+|-----|----|-------|
+| `Backend Tests (Jest)` | SQLite en memoria | Rápido (~48s), feedback inmediato |
+| `Backend Tests (Jest + PostgreSQL)` | `postgres:16` real | **Red de seguridad** (~1m13s) |
+
+**SQLite NO valida ENUM ni UUID; Postgres sí.** Correr solo contra SQLite dejó llegar a
+producción bugs que la suite daba por buenos, entre ellos uno crítico: **crear un equipo
+fallaba siempre**, y sin equipos no hay reportes. Ver [`TECH_DEBT.md`](TECH_DEBT.md) #3.5.
+
+Si tocas el job de Postgres, ten presente que `src/__tests__/setup.js` hace
+`DROP SCHEMA public CASCADE` y **se niega a hacerlo si el nombre de la base no contiene
+`test`** — esa salvaguarda evita borrar producción por un `DATABASE_URL` mal puesto. No la quites.
+
+Además, el CI corre lint y `npm audit` sobre ambos workspaces.
 
 ---
 

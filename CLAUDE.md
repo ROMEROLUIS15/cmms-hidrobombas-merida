@@ -34,6 +34,8 @@ npm test -w backend -- -t "nombre del test"
 npm run test:run -w frontend -- src/__tests__/hooks/useOfflineQueue.test.jsx
 ```
 
+`npm test -w backend` runs against **SQLite** (385 tests). The CI *also* runs the same suite against a real **Postgres** service — that second job is the one that catches enum/UUID bugs, and it needs `--runInBand` because the Jest workers share one database. To reproduce it you need a Postgres whose database name contains `test` (see the DROP SCHEMA guard below).
+
 Backend-only utilities (run inside `backend/`):
 
 ```bash
@@ -44,31 +46,59 @@ node bootstrap-admin.js  # interactive: create the first admin
 npm run diagnose:db
 ```
 
+## ⚠️ Read this first — lessons paid for in production (2026-07-13)
+
+A full end-to-end run against production found ~6 bugs **while all 384 tests were green**, including one that made the app useless: **creating a piece of equipment failed every time**, and without equipment there are no service reports. Internalize these or you will reintroduce them.
+
+**A green suite is not evidence.** Two structural reasons:
+
+1. **SQLite validates neither ENUM nor UUID. Postgres does.** The suite ran only against SQLite, so bad enum values and malformed UUIDs sailed through and blew up (500) only in production. The CI now also runs the suite against **real Postgres** — that job is the safety net, not the SQLite one.
+2. **Tests were encoding the bugs.** A mock that fabricated a `MemoryVectorStore` the module never exported; `expect(status).toBe('active')` for a value the DB rejects; `visit_type: 'semestral'`, which doesn't exist; `toHaveBeenCalledWith('/api/ai/chat')` for a relative URL that 405s in production. **A test that asserts what the code *does* — rather than what it *should* do — turns the bug into a contract.** When a test fails after your fix, first ask whether the test was wrong.
+
+**Enums have a single source of truth: the model.** `EQUIPMENT_STATUSES`, `VISIT_TYPES`, `USER_ROLES` are exported from `models/` and **imported** by controllers and Zod validators. Never redeclare them — three of the bugs came from duplicated, divergent lists.
+
+**Rate limiting is a protection, not a critical dependency.** Wiring up Redis took production down (500 on every login) because `express-rate-limit` propagates store errors. `config/rateLimitStore.js` now degrades to an in-memory store when Redis fails.
+
+**The frontend and backend are different domains.** Every API call must be absolute via `import.meta.env.VITE_API_URL`. A relative `/api/...` hits the frontend's own static hosting and returns **405** — that left the AI assistant dead from day one while the entire AI backend worked fine.
+
+**Verify against production, not against the suite.** All of the above surfaced by exercising the real flow (login → client → equipment → report → PDF → email → AI).
+
 ## Architecture
 
 ### Dual database, chosen at import time
 
-`backend/src/config/database.js` picks the dialect from env: `DATABASE_URL` present → PostgreSQL (Neon), absent → SQLite. On Vercel (`process.env.VERCEL`) Postgres is **forced** and a missing `DATABASE_URL` throws at startup.
+`backend/src/config/database.js` picks the dialect from env: `DATABASE_URL` present → PostgreSQL, absent → SQLite. On Vercel (`process.env.VERCEL`) Postgres is **forced** and a missing `DATABASE_URL` throws at startup.
 
-Two non-obvious consequences:
+Three non-obvious consequences:
 
-- Postgres connects through the **Neon serverless driver over WebSocket/443**, injected as Sequelize's `dialectModule`, not plain `pg` over TCP/5432 — the local network blocks 5432. Don't "simplify" this back to `pg`.
+- Against **Neon**, Postgres connects through the **serverless driver over WebSocket/443**, injected as Sequelize's `dialectModule`, not plain `pg` over TCP/5432 — the local network blocks 5432. Don't "simplify" this back to `pg`.
+- Against a **local** Postgres (`localhost`/`127.0.0.1`, i.e. the CI service), that driver is skipped and TLS is disabled: a local server speaks neither WebSocket nor TLS.
 - If Postgres fails to connect there is **no silent fallback** to SQLite; the error propagates and the server exits. Opt in with `ALLOW_SQLITE_FALLBACK=true` only for deliberate offline work.
 
 ### Schema is migration-driven, except in tests
 
 Schema lives in versioned files under `backend/migrations/` (`000X-descripcion.js` exporting `up({ queryInterface, sequelize, DataTypes })` / `down(...)`), applied by a dependency-free runner (`src/config/migrator.js`) that tracks state in a `SequelizeMeta` table. Server startup applies pending migrations automatically. **There is no implicit `sequelize.sync()` in production** — a schema change means a new migration file.
 
-Tests are the exception: `src/__tests__/setup.js` does `sequelize.sync({ force: true })` against in-memory SQLite (`jest.setupEnv.js` sets `DB_STORAGE=':memory:'`, clears `DATABASE_URL`/`VERCEL`). So a model change can pass tests while breaking a real Postgres deploy if you forget the migration.
+Tests are the exception: `src/__tests__/setup.js` does `sequelize.sync({ force: true })`. Against Postgres, `sync` recreates tables but **leaves ENUM types behind**, so the setup first wipes the schema (`DROP SCHEMA public CASCADE`).
+
+> 🛑 That DROP destroys the whole database. `setup.js` **refuses to run it unless the database name contains `test`** — the guard exists so that a misaimed `DATABASE_URL` can't wipe production. Do not remove it.
 
 ### Request pipeline
 
 `Route → protect/authorize → validateRequest(zodSchema) → controller → Sequelize model`
 
 - `middleware/authMiddleware.js` — `protect` reads the JWT from the `Authorization: Bearer` header **or** the `token` cookie, and re-checks the user still exists and `isActive`. `authorize(...roles)` gates by role; `authorizeSelfOrAdmin(param)` lets a technician hit only their own `:id`.
-- `middleware/zodMiddleware.js` + `validators/*.js` — body validation; schemas live per-resource.
+- `middleware/zodMiddleware.js` + `validators/*.js` — body validation; schemas live per-resource. Zod schemas that cover an enum column **must import its values from the model** (see the lessons above).
+- `middleware/validateUuidParam.js` — guards `:id` routes. Without it a malformed id reaches `findByPk` and Postgres answers `invalid input syntax for type uuid` → a 500 instead of a 404.
 - Controllers use `express-async-handler`; all errors land in `middleware/errorHandler.js`, which never leaks stack traces in production.
 - `middleware/idempotencyMiddleware.js` is global and keys off `X-Idempotency-Key` (backed by the `idempotency_keys` table, 24h TTL) — this is what makes the offline replay safe.
+- `app.set('trust proxy', …)` via `utils/trustProxy.js`: on Vercel the client IP only arrives in `X-Forwarded-For`. Trusted **only** on Vercel — off-platform, trusting that header would let anyone forge it and rotate IPs past the rate limit.
+
+### The first admin cannot be created through the web
+
+Self-registration always creates **pending** technicians (`isActive: false`), and only an admin can approve them. With zero admins every signup is born locked and nobody can unlock it — this happened in production. `POST /api/auth/register` therefore returns **409 `SYSTEM_NOT_INITIALIZED`** while no active admin exists (`utils/bootstrap.js`), and `GET /api/auth/bootstrap-status` lets the frontend explain why.
+
+The first admin comes from `backend/bootstrap-admin.js`, which requires DB access. The first registrant is **deliberately not** auto-promoted: on a public deploy, whoever finds the URL before the owner would become the administrator.
 
 ### Authorization is two-layered
 
@@ -82,16 +112,23 @@ Assignments are three many-to-many join models: `AdminTechnician`, `TechnicianCl
 
 ### Rate limiting
 
-Three limiters in `app.js` (auth 15/15min, api 100/15min, ai `AI_RATE_LIMIT_MAX` default 30/15min), all with `skip: NODE_ENV === 'test'`. Each uses a Redis store when `REDIS_URL` is set (`config/rateLimitStore.js`), otherwise a per-instance MemoryStore — which on serverless means the real limit is weaker than it looks.
+Three limiters in `app.js` (auth 15/15min, api 100/15min, ai `AI_RATE_LIMIT_MAX` default 30/15min), all with `skip: NODE_ENV === 'test'`. With `REDIS_URL` set (Upstash, in production) the count is **global**; without it, each lambda keeps its own memory and the real limit is far weaker than it looks.
+
+`config/rateLimitStore.js` wraps the Redis store in `withMemoryFallback`: if Redis errors, it degrades to an in-process store instead of failing the request. Two bugs here already took production down — see the lessons above. Note `lazyConnect` **requires** `enableOfflineQueue: true`, or the very first command is rejected with *"Stream isn't writeable"*.
 
 ### AI layer
 
 `backend/src/ai/` (LangChain + Groq + LangGraph) behind `/api/ai`. `container.js` is a tiny DI seam — tests swap the LLM and embeddings factories via `setCreateLLM`/`setCreateEmbeddings` rather than mocking LangChain modules. See `API_REFERENCE.md` and `AGENT_MAESTRO_GUIDE.md`.
 
+- **`groq_configured` in `/api/ai/status` only means the env var exists — it lied in production while Groq rejected every call.** The honest field is **`groq_key_status`** (`ai/health.js`), which validates the key against Groq without spending tokens. It deliberately separates `invalid` (401: revoked key) from `unreachable` (403 geo-block, timeout): Groq geo-blocks some IPs and answers 403 **before** looking at the credential, so from the local network a good key and a dead one look identical. **Never validate the Groq key locally.**
+- **Vector store:** production sets `VECTOR_STORE_PROVIDER=pgvector`, so embeddings persist in Postgres (`ai_report_embeddings`). The code **default is still `memory`**, which in serverless means each lambda holds its own index and a freshly created report may be invisible to the RAG. If the env var ever disappears, it silently falls back.
+- `MemoryVectorStore` lives in **`@langchain/classic/vectorstores/memory`**, not in `@langchain/core/vectorstores` (which only exports the base class). Importing it from the wrong place does not fail at load — it explodes at runtime the first time anyone uses the RAG.
+
 **LangChain dependencies are fragile in production:** bumping them (or running `npm audit fix`) has broken the Vercel deploy while all tests stayed green. Verify a Vercel preview before merging any change to those packages.
 
 ### Frontend
 
+- **Every API call must be absolute**, built from `import.meta.env.VITE_API_URL`. The frontend is static hosting on a *different* Vercel domain than the backend: a relative `/api/...` POSTs to itself and gets a **405**. This is not hypothetical — it silently killed the AI assistant.
 - `WizardContext.jsx` holds the whole 13-step form state; steps read/write `formData` through `useWizard()`, drafts persist to IndexedDB.
 - Offline: `useNetworkStatus` (online/offline events) + `useOfflineQueue` (idb-keyval queue). Every submit carries a `clientRequestId` (UUID) sent as `X-Idempotency-Key` and `_clientRequestId`; the queue dedupes on it, and entries are removed **only** on a successful replay. Its tests use `fake-indexeddb/auto` against the real IndexedDB logic — don't replace that with a module mock.
 - `@` is aliased to `frontend/src`. Build output is `frontend/build/` (not `dist/`).
@@ -101,6 +138,7 @@ Three limiters in `app.js` (auth 15/15min, api 100/15min, ai `AI_RATE_LIMIT_MAX`
 
 - **npm workspaces:** the only lockfile that counts is the root `package-lock.json`. Audit there, not per-workspace. A clean install from scratch fails on peer deps (ERESOLVE) — don't delete the lock to "fix" things; use `--legacy-peer-deps` if you must.
 - **Husky hooks:** `pre-commit` lints both workspaces, `pre-push` runs both test suites. Do not bypass with `--no-verify`.
-- Conventional Commits; PRs target `develop`.
+- Conventional Commits. PRs in practice merge to `main` (the README still says `develop`).
 - Integration tests must create their fixtures in `beforeEach` and use the returned IDs — never hardcode IDs.
-- Design decisions and known debt are in `ARCHITECTURE.md` and `TECH_DEBT.md`; `memory/MEMORY.md` indexes gotchas learned the hard way (deploy refs, dependency traps).
+- **Deploying/observing production:** `npx vercel redeploy <url>` rebuilds the deployed commit with the current env vars. Do **not** run `vercel --prod` from a local checkout — it uploads the working tree. Real runtime errors only show up in `npx vercel logs <url> --json`; the API just returns `Internal server error` plus a `correlationId`. Some env vars (`DATABASE_URL`, `SMTP_*`) are *Sensitive*: `vercel env pull` returns them **empty**, which does not mean they are unset.
+- **Where things are written down:** [`PENDING_TASKS.md`](PENDING_TASKS.md) is the actionable checklist (with file:line evidence); [`TECH_DEBT.md`](TECH_DEBT.md) explains the *why*; `ARCHITECTURE.md` §8 holds the lessons from the production incidents; `memory/MEMORY.md` indexes the traps (deploy refs, dependency traps, the SQLite/Postgres trap, the Groq geo-block).
