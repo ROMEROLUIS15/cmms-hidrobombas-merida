@@ -1,7 +1,11 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 
-const AI_API = '/api/ai';
+// Debe apuntar al BACKEND, igual que el resto de componentes. Con la ruta
+// relativa ('/api/ai'), en producción el navegador hacía POST contra el propio
+// frontend (hosting estático) y recibía un 405: el backend ni se enteraba.
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const AI_API = `${BACKEND_URL}/api/ai`;
 
 export function useAIChat() {
   const [messages, setMessages] = useState([]);
