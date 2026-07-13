@@ -3,6 +3,7 @@ const { askQuestion, diagnose, chat, reindexReports } = require('../ai');
 const { streamChat, streamQuestion } = require('../ai/streaming');
 const { activeProviderLabel } = require('../ai/vectorStore');
 const { resolveModel } = require('../ai/config');
+const { checkGroqKey } = require('../ai/health');
 
 const aiAsk = asyncHandler(async (req, res) => {
   const { question } = req.body;
@@ -66,10 +67,17 @@ const aiStatus = asyncHandler(async (req, res) => {
   const hasGroq = !!process.env.GROQ_API_KEY;
   const hasHuggingFace = !!process.env.HUGGINGFACEHUB_API_KEY;
 
+  // `*_configured` solo dice que la variable EXISTE. Eso mintió en producción:
+  // reportaba groq_configured:true mientras Groq rechazaba cada llamada con
+  // 401 invalid_api_key. `groq_key_status` valida la credencial de verdad.
+  const groqKey = await checkGroqKey();
+
   res.status(200).json({
     success: true,
     data: {
       groq_configured: hasGroq,
+      groq_key_status: groqKey.status,
+      groq_key_detail: groqKey.detail,
       huggingface_configured: hasHuggingFace,
       llm_provider: `Groq (${resolveModel()})`,
       embeddings_provider: 'HuggingFace (all-MiniLM-L6-v2)',

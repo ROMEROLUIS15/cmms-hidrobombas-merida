@@ -10,6 +10,11 @@ jest.mock('../ai/streaming', () => ({
   streamQuestion: jest.fn(),
 }));
 
+// aiStatus valida la credencial contra Groq; sin mock, la suite saldría a la red.
+jest.mock('../ai/health', () => ({
+  checkGroqKey: jest.fn().mockResolvedValue({ status: 'valid', detail: null }),
+}));
+
 const request = require('supertest');
 const app = require('../app');
 const { User } = require('../models');
@@ -63,6 +68,7 @@ describe('AI Routes Integration Tests', () => {
       expect(response.body.data.groq_configured).toBe(true);
       expect(response.body.data.huggingface_configured).toBe(true);
       expect(response.body.data.llm_provider).toBe('Groq (openai/gpt-oss-120b)');
+      expect(response.body.data.groq_key_status).toBe('valid');
       expect(response.body.data.langgraph_agents).toEqual(['assistantGraph', 'diagnosticGraph']);
     });
   });

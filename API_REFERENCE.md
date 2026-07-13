@@ -20,6 +20,8 @@ Authorization: Bearer <JWT>
   "success": true,
   "data": {
     "groq_configured": true,
+    "groq_key_status": "valid",
+    "groq_key_detail": null,
     "huggingface_configured": true,
     "llm_provider": "Groq (openai/gpt-oss-120b)",
     "embeddings_provider": "HuggingFace (all-MiniLM-L6-v2)",
@@ -28,6 +30,20 @@ Authorization: Bearer <JWT>
   }
 }
 ```
+
+> ⚠️ `groq_configured` solo indica que la **variable de entorno existe**, no que
+> la credencial sirva. Para saber si la IA funciona de verdad, mirar
+> **`groq_key_status`**, que valida la key contra Groq (vía `GET /openai/v1/models`,
+> sin gastar tokens):
+>
+> | `groq_key_status` | Significado |
+> |---|---|
+> | `valid` | Groq acepta la key. La IA funciona. |
+> | `invalid` | 401: la key está revocada o es errónea. Regenerar en console.groq.com/keys. |
+> | `unreachable` | No se pudo validar (403 geo-bloqueo por IP, timeout o error de red). La key **puede** ser válida. |
+> | `not_configured` | No hay `GROQ_API_KEY`. |
+>
+> `groq_key_detail` explica el motivo cuando no es `valid`.
 
 ---
 
