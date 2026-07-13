@@ -124,10 +124,13 @@ const buildReportPDF = async (reportId) => {
      .text('HIDROBOMBAS MÉRIDA', 50, 50, { width: pw - 160 });
   doc.fontSize(8).font('Helvetica').fillColor('#93c5fd')
      .text('Servicio Técnico Especializado en Sistemas de Bombeo', 50, 68);
-  // Datos reales de la empresa. El RIF es el del logo (frontend/public/logo.jpg):
-  // V-03240843-1 — con V (persona natural / firma personal), no con J.
+  // Datos reales de la empresa, tal como figuran en el logo (frontend/public/logo.jpg).
+  // Es una FIRMA PERSONAL: de ahí el titular y el RIF con V (persona natural), no con J.
+  // Las 4 líneas del header caben en el rect de 65pt (y=40..105): la última acaba en ~98.
   doc.fillColor('#bfdbfe').fontSize(7)
-     .text('RIF: V-03240843-1  •  Tel: 0424-705.7937  •  hidrobombas.merida1948@gmail.com', 50, 80);
+     .text('de Francisco Elieser Gonzáles Duarte', 50, 79);
+  doc.fillColor('#bfdbfe').fontSize(7)
+     .text('RIF: V-03240843-1  •  Tel: 0424-705.7937  •  hidrobombas.merida1948@gmail.com', 50, 89);
 
   // Report number box
   doc.rect(pw - 110, 45, 145, 52).fill('#1e40af');
