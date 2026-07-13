@@ -4,7 +4,21 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 
 ---
 
-## 1. IA (agente) — no verificable localmente, sí en producción
+## 1. IA (agente) — ✅ FUNCIONANDO en producción (verificado 2026-07-13)
+
+**Estado:** chat, diagnóstico y RAG responden en producción. Se verificó end-to-end con
+llamadas reales. Lo que hizo falta:
+- `GROQ_API_KEY`: no existía en Vercel, **y la del `.env` estaba revocada**. Rotada y
+  seteada. `/api/ai/status` expone ahora `groq_key_status` (validación REAL contra Groq);
+  `groq_configured` solo dice que la variable existe y llegó a mentir.
+- `HUGGINGFACEHUB_API_KEY`: seteada en Vercel (permiso *"Make calls to Inference
+  Providers"*).
+- **`VECTOR_STORE_PROVIDER=pgvector`**: los embeddings persisten en Neon (tabla
+  `ai_report_embeddings`, extensión `vector 0.8.1`). Con el `MemoryVectorStore` anterior el
+  índice vivía en la RAM de cada lambda y un reporte recién creado podía **no verse**.
+- **`useAI.js` llamaba a una ruta RELATIVA** (`/api/ai`) → el navegador hacía POST contra
+  el hosting estático del frontend y recibía **405**. El asistente estuvo inservible desde
+  el día uno pese a que el backend funcionaba. Corregido (PR #67).
 
 **Qué es:** El asistente/diagnóstico usa:
 - **LLM:** Groq `openai/gpt-oss-120b` (`@langchain/groq`) — ver `backend/src/ai/config.js`. Migrado desde `llama3-70b-8192` el 2026-07-12: Groq retiró esa familia Llama y anunció la baja de `llama-3.3-70b-versatile` y `llama-3.1-8b-instant` (dejan de servirse el **2026-08-16**). GPT-OSS 120B es el reemplazo recomendado por Groq para la gama 70B; `openai/gpt-oss-20b` es la opción barata. El modelo se cambia sin tocar código vía `GROQ_MODEL`.
@@ -15,13 +29,12 @@ Registro de limitaciones conocidas y trabajo pendiente. Última verificación: *
 - **Groq** geo-bloquea por IP. Devuelve `403 Access denied. Please check your network settings` aunque la API key sea válida.
   Verificado 2026-06-06: `POST /api/ai/chat` → `500` (el agente llega a Groq y este rechaza).
   → La IP de Vercel (US) **sí** está permitida, así que el geo-bloqueo no aplica allí. No hay arreglo de código.
-  → ⚠️ **PERO en producción no está configurada `GROQ_API_KEY`** (verificado 2026-07-12 con `npx vercel env ls production`: solo hay vars de DB/JWT/SMTP/SEED). Es decir, la IA **tampoco funciona en prod hoy**; `/api/ai/status` responde `groq_configured: false`. Para habilitarla hay que setear `GROQ_API_KEY` en Vercel. `GROQ_MODEL` no hace falta: el default del código ya es el modelo vigente.
-- **HuggingFace** (embeddings): el token actual NO tiene el permiso *"Inference Providers"*.
-  → Arreglo (no es código): regenerar el token en `hf.co/settings/tokens` activando **"Make calls to Inference Providers"**.
+  → ⚠️ **El geo-bloqueo OCULTA si la key sirve:** el 403 llega ANTES de validar la credencial, así que desde local una key buena y una revocada se ven idénticas. Eso escondió durante semanas que la key estaba muerta. **No validar la key desde local; mirar `groq_key_status` en `/api/ai/status`,** que lo comprueba desde Vercel sin gastar tokens.
+- **HuggingFace** (embeddings): resuelto. El token necesita el permiso *"Make calls to Inference Providers"* (fine-grained); ya está seteado en Vercel.
 
 **Deuda real:**
-- No hay test de integración que ejercite el LLM real; los tests mockean el LLM vía el contenedor de inyección de dependencias (`backend/src/ai/container.js`). La capa IA solo se valida de verdad en el deployment.
-- Para verificar IA en local: VPN a una región permitida por Groq + token de HF con permiso de inference. Si no, validar solo vía el preview/producción de Vercel.
+- No hay test de integración que ejercite el LLM real; los tests mockean el LLM vía el contenedor de inyección de dependencias (`backend/src/ai/container.js`). La capa IA solo se valida de verdad en el deployment — y eso permitió que el bug del 405 del frontend pasara desapercibido.
+- Para verificar IA en local: VPN a una región permitida por Groq. Si no, validar solo vía el preview/producción de Vercel.
 
 ---
 
@@ -87,6 +100,42 @@ de Vercel son *Sensitive*: no se pueden leer, solo sobrescribir.
 - **Pendientes (requieren `--force` / breaking, NO aplicados):**
   - Backend `uuid` (20 moderate): `audit fix --force` quiere **degradar `sequelize` a 3.30.0** (rompe el ORM). La app usa `UUIDV4` sin `buf`, así que **no dispara** la advisory (GHSA-w5hq-g745-h8pq). Se deja.
   - Frontend 3 high restantes: requieren bump **mayor de `vite`** (rompería el build). Tooling de dev, no llega al usuario. Se deja para un bump deliberado de Vite.
+
+---
+
+## 3.5 ⚠️ La suite pasa en verde con producción rota — DEUDA MÁS IMPORTANTE
+
+**Qué pasó (2026-07-13):** con **384 tests en verde**, ejercitar el flujo real contra
+producción destapó ~6 bugs, uno de ellos crítico: **crear un equipo fallaba SIEMPRE**
+(`invalid input value for enum enum_equipment_status: "active"`). Sin equipos no hay
+reportes: el CMMS no servía para su función principal.
+
+**Dos causas estructurales:**
+
+**a) La trampa SQLite/Postgres.** Los tests corren contra SQLite, que **no valida ENUM ni
+UUID**; Postgres sí. Todo lo que dependa de eso pasa el CI y revienta solo en producción:
+- enum de `status` en Equipment (500 en cada alta),
+- `visit_type` sin validar (500 en vez de 400),
+- `:id` malformado → `invalid input syntax for type uuid` (500 en vez de 404).
+
+**b) Los tests CODIFICAN el bug.** Cuatro casos reales en una sola sesión:
+- `aiVectorStore.unit` mockeaba `@langchain/core/vectorstores` **fabricando una clase que
+  ese módulo nunca exportó** → ocultó un import roto que reventaba el RAG.
+- `equipmentRoutes.integration`: `expect(status).toBe('active')` ← el valor inválido.
+- `serviceReportRoutes.integration`: enviaba `visit_type:'semestral'` (inexistente) y
+  esperaba 200.
+- `useAI.test`: `toHaveBeenCalledWith('/api/ai/chat')` ← la ruta relativa que daba 405.
+
+Un test que afirma lo que el código **hace** (en vez de lo que **debería** hacer) no prueba
+nada: convierte el bug en contrato y lo blinda contra el arreglo.
+
+**Decisión pendiente:** correr los **tests de integración contra Postgres en el CI**
+(servicio `postgres` en GitHub Actions). La paridad con SQLite es cómoda para desarrollar,
+pero esconde justo esta clase de fallos. Mientras tanto: **verificar contra producción, no
+contra la suite.**
+
+Mitigación ya aplicada: los enums tienen ahora una **única fuente de verdad en el modelo**
+(`EQUIPMENT_STATUSES`, `VISIT_TYPES`), que controladores y validadores Zod importan.
 
 ---
 

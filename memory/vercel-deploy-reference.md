@@ -20,8 +20,13 @@ directorio raíz quedó **linkeado** al proyecto backend (`.vercel/`, gitignored
 **`GROQ_API_KEY`** (rotada; la vieja estaba revocada) y **`HUGGINGFACEHUB_API_KEY`**.
 `GROQ_MODEL` NO existe a propósito: así manda el default del código (`openai/gpt-oss-120b`).
 El 2026-07-13 se rotaron **`JWT_SECRET`** y **`REFRESH_TOKEN_SECRET`** (ya NO coinciden con
-`backend/.env`) y se conectó Upstash, que inyecta **`REDIS_URL`** + `KV_*`
-(ver [[upstash-redis-rate-limit]]).
+`backend/.env`), se conectó Upstash, que inyecta **`REDIS_URL`** + `KV_*`
+(ver [[upstash-redis-rate-limit]]), y se activó **`VECTOR_STORE_PROVIDER=pgvector`** para
+que los embeddings del RAG persistan en Neon.
+
+**El FRONTEND es otro proyecto Vercel, con otro dominio.** Su `VITE_API_URL` apunta al
+backend y Vite la inyecta en tiempo de build. Nunca usar rutas relativas `/api/...` en el
+frontend: dan 405. Ver [[frontend-url-api-absoluta]].
 
 ⚠️ `DATABASE_URL` estuvo apuntando a una **BD vacía y equivocada** hasta el 2026-07-12;
 corregida en Production y Preview. Ver [[prod-neon-database]].
