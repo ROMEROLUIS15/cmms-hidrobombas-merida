@@ -11,7 +11,7 @@
 - [Referencia de deploy Vercel](vercel-deploy-reference.md) — proyectos (backend=cmms-hidrobombas-merida-backend), `npx vercel` linkeado, env vars de prod; usar `vercel redeploy`, nunca `--prod` desde local
 - [Tareas de config pendientes](pending-config-tasks.md) — estado tras poner prod en marcha (2026-07-13); ya solo queda el SMTP
 - [Upstash Redis (rate limiting)](upstash-redis-rate-limit.md) — cómo está montado; conectarlo tumbó producción (500 en todos los logins): un fallo del store NO debe matar la API
-- [Tests en verde, producción rota](tests-verde-produccion-rota.md) — ⚠️ EL MÁS IMPORTANTE: SQLite no valida ENUM/UUID y los tests codifican los bugs; verificar contra producción, no contra la suite
+- [Tests en verde, producción rota](tests-verde-produccion-rota.md) — SQLite no valida ENUM/UUID y los tests codificaban los bugs; RESUELTO con un job de CI contra Postgres real (no quitar la salvaguarda del DROP SCHEMA)
 - [El frontend debe usar URL absoluta](frontend-url-api-absoluta.md) — frontend y backend son dominios distintos; una ruta relativa `/api/...` da 405 y dejó el asistente de IA muerto desde el día uno
 - [BD de producción (Neon)](prod-neon-database.md) — cuál es la Neon buena; Vercel apuntó a una vacía y el login daba 500 con "relation users does not exist"
 - [El geo-bloqueo de Groq oculta keys muertas](groq-geoblock-masks-invalid-key.md) — desde local nunca sabrás si la API key sirve; mirar `groq_key_status`, no `groq_configured`
