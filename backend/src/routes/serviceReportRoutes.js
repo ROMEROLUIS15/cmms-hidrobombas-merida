@@ -11,21 +11,26 @@ const { downloadReportPDF, sendReportByEmail } = require('../controllers/pdfCont
 const { protect } = require('../middleware/authMiddleware');
 const { validateRequest } = require('../middleware/zodMiddleware');
 const { createServiceReportSchema, updateServiceReportSchema } = require('../validators/serviceReportValidators');
+const { validateUuidParam } = require('../middleware/validateUuidParam');
 
 // All routes require authentication
 router.use(protect);
 
+// Un :id malformado llegaba hasta Postgres y devolvía 500
+// (`invalid input syntax for type uuid`). Ahora corta aquí con un 404.
+const uuid = validateUuidParam('id');
+
 // ── PDF (must be before /:id to avoid param conflict) ────────────────────────
-router.get('/:id/pdf', downloadReportPDF);
+router.get('/:id/pdf', uuid, downloadReportPDF);
 
 // ── Email delivery ────────────────────────────────────────────────────────────
-router.post('/:id/email', sendReportByEmail);
+router.post('/:id/email', uuid, sendReportByEmail);
 
 // ── CRUD ─────────────────────────────────────────────────────────────────────
 router.get('/',        getServiceReports);
-router.get('/:id',     getServiceReportById);
+router.get('/:id',     uuid, getServiceReportById);
 router.post('/',       validateRequest(createServiceReportSchema), createServiceReport);
-router.put('/:id',     validateRequest(updateServiceReportSchema), updateServiceReport);
-router.delete('/:id',  deleteServiceReport);
+router.put('/:id',     uuid, validateRequest(updateServiceReportSchema), updateServiceReport);
+router.delete('/:id',  uuid, deleteServiceReport);
 
 module.exports = router;
