@@ -5,6 +5,32 @@ import { useAIChat, useAIDiagnose, useAIAsk } from '../../hooks/useAI';
 
 vi.mock('axios');
 
+/**
+ * Blindaje del bug que dejó el asistente inservible en producción: el hook usaba
+ * la ruta RELATIVA '/api/ai', así que el navegador hacía POST contra el propio
+ * frontend (hosting estático) y recibía un 405. El backend ni se enteraba.
+ * Los tests anteriores afirmaban `toHaveBeenCalledWith('/api/ai/chat')`, es
+ * decir, CODIFICABAN el bug como comportamiento correcto.
+ */
+describe('useAI: las llamadas deben ir al BACKEND, nunca a una ruta relativa', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('la URL es absoluta y apunta al backend', async () => {
+    axios.post.mockResolvedValue({ data: { data: { response: 'ok' } } });
+    const { result } = renderHook(() => useAIChat());
+
+    await act(async () => {
+      await result.current.sendMessage('hola');
+    });
+
+    const url = axios.post.mock.calls[0][0];
+    expect(url.startsWith('/')).toBe(false); // ← una ruta relativa daría 405 en prod
+    expect(url).toMatch(/^https?:\/\/.+\/api\/ai\/chat$/);
+  });
+});
+
 describe('useAIChat', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +55,7 @@ describe('useAIChat', () => {
       returnedResponse = await result.current.sendMessage('What is a pump?');
     });
 
-    expect(axios.post).toHaveBeenCalledWith('/api/ai/chat', { message: 'What is a pump?' });
+    expect(axios.post).toHaveBeenCalledWith('http://localhost:8001/api/ai/chat', { message: 'What is a pump?' });
     expect(result.current.messages).toEqual([
       { role: 'user', content: 'What is a pump?' },
       { role: 'assistant', content: 'I can help with that!' },
@@ -101,7 +127,7 @@ describe('useAIDiagnose', () => {
       });
     });
 
-    expect(axios.post).toHaveBeenCalledWith('/api/ai/diagnose', {
+    expect(axios.post).toHaveBeenCalledWith('http://localhost:8001/api/ai/diagnose', {
       equipment_id: 'eq-1',
       equipment_name: 'Motor',
       symptoms: 'Vibration',
@@ -186,7 +212,7 @@ describe('useAIAsk', () => {
       returnedAnswer = await result.current.ask('What is a pump?');
     });
 
-    expect(axios.post).toHaveBeenCalledWith('/api/ai/ask', { question: 'What is a pump?' });
+    expect(axios.post).toHaveBeenCalledWith('http://localhost:8001/api/ai/ask', { question: 'What is a pump?' });
     expect(result.current.answer).toBe('A pump moves fluids.');
     expect(returnedAnswer).toBe('A pump moves fluids.');
   });

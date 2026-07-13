@@ -82,7 +82,15 @@ const dbDelete = async (id) => {
  *   reenviar a esta URL, no a una ruta relativa a su propio origen.
  * @returns {{ id: number, clientRequestId: string }} queued item metadata
  */
-export const enqueueReport = async (reportData, token, url = '/api/service-reports') => {
+export const enqueueReport = async (
+  reportData,
+  token,
+  // El default apunta al BACKEND, no al origen de la PWA. Con una ruta relativa,
+  // el reenvío iría contra el hosting estático del frontend y devolvería 405
+  // (es justo lo que le pasaba al asistente de IA). Hoy ServiceWizard pasa la
+  // URL absoluta, pero un default relativo es una trampa para el próximo llamador.
+  url = `${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/api/service-reports`
+) => {
   // Generate a stable idempotency key for this specific report attempt
   const clientRequestId = reportData._clientRequestId || uuidv4();
   const reportWithId = { ...reportData, _clientRequestId: clientRequestId };
