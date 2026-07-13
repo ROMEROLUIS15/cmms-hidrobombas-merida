@@ -32,6 +32,12 @@ let sequelize;
 if (isPostgres) {
   const url = new URL(databaseUrl);
 
+  // Postgres LOCAL (el servicio del CI, o un docker de desarrollo): ni TLS ni
+  // driver de Neon. El driver serverless habla WebSocket contra la API de Neon,
+  // así que contra un postgres normal no sirve; y un servidor local no ofrece
+  // certificado, luego exigir TLS haría fallar la conexión.
+  const isLocalPg = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+
   sequelize = new Sequelize({
     database: url.pathname.replace(/^\//, ''),
     username: decodeURIComponent(url.username),
@@ -41,8 +47,8 @@ if (isPostgres) {
     dialect: 'postgres',
     // Conexión vía WebSocket (Neon serverless). Si por alguna razón el driver no
     // está disponible, Sequelize cae al `pg` estándar (TCP) y dialectOptions aplica.
-    ...(neonServerless ? { dialectModule: neonServerless } : {}),
-    dialectOptions: {
+    ...(neonServerless && !isLocalPg ? { dialectModule: neonServerless } : {}),
+    dialectOptions: isLocalPg ? {} : {
       // Verificamos la cadena de certificados TLS (antes estaba en `false`, lo
       // que aceptaba cualquier cert y abría la puerta a MITM en la conexión a la
       // DB). Neon emite certificados de una CA pública (Let's Encrypt / ISRG Root),
