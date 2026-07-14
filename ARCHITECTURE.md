@@ -281,6 +281,17 @@ const res = await request(app)
 
 **Regla de oro:** Nunca usar IDs estáticos en tests de integración. Siempre crear los recursos en el `beforeEach` y usar los IDs retornados.
 
+### Pruebas de carga (k6) — el cuarto nivel
+
+Sobre los tres niveles habituales (unitario, integración, E2E con Playwright) hay un
+cuarto que responde una pregunta distinta: **no "¿es correcto?" sino "¿aguanta?"**.
+Vive en [`k6/`](k6/) y **no corre en CI** — necesita Postgres, migraciones y un admin
+creado, y el `smoke` aportaría poca señal sobre lo que el job de Postgres ya cubre.
+
+Es la única capa que se ejecuta contra la **arquitectura desplegada** (lambdas + Neon),
+donde aparecen cosas que ningún test unitario puede ver: la latencia de red, el arranque
+en frío y el pool de conexiones. Detalle en §9.
+
 ---
 
 ## 5. Flujo de Datos — Reporte de Servicio
@@ -376,6 +387,59 @@ Ahora degrada a memoria si Redis falla (`config/rateLimitStore.js`).
 
 **Frontend y backend son dominios distintos.** Toda llamada debe ser absoluta vía
 `VITE_API_URL`. Una ruta relativa va contra el hosting estático y devuelve 405.
+
+**Mide antes de optimizar — y sospecha de tu intuición.** Dos creencias razonables
+sobre el rendimiento de este sistema resultaron **falsas al medirlas** (ver §9):
+
+1. *"El bloqueo de fila del contador de reportes serializa las altas y no escalará."*
+   Serializa, sí — con un techo de ~90 altas/s. Sobra por órdenes de magnitud.
+   **Quitarlo habría reintroducido números `SRV-XXXX` duplicados a cambio de nada.**
+2. *"El pool de conexiones de Neon reventará bajo carga."* No revienta: 200 VUs
+   concurrentes, cero 5xx. La intuición señaló el sitio correcto y la conclusión
+   equivocada, **las dos veces**.
+
+---
+
+## 9. Rendimiento — medido, no supuesto (2026-07-13)
+
+Suite de carga con **k6** en [`k6/`](k6/): `smoke`, `load`, `write-flow`, `stress` y
+`rate-limit`. Se ejecutaron contra PostgreSQL real y contra un **staging con la misma
+arquitectura que producción** (lambdas de Vercel + branch de Neon), no solo en local.
+
+### Línea base
+
+| Escenario | Local (Docker PG) | Staging (Vercel + Neon) |
+|---|---|---|
+| `load` — 20 VUs, lecturas | p95 19 ms | p95 231 ms, 0 fallos |
+| `stress` — hasta 200 VUs | p95 41 ms, 0 5xx | p95 276 ms, 113 req/s, **0 5xx** |
+| `write-flow` — techo de altas | ~70/s | **~90/s**, 0 errores |
+
+### Lo que se aprendió
+
+- **La arquitectura serverless NO es el cuello de botella.** El pool de Neon no se
+  agota porque el driver serverless va sobre **WebSocket/443** y no mantiene una
+  conexión TCP viva por lambda. Es la misma pieza que §2 prohíbe "simplificar" a `pg`:
+  resulta que además es lo que hace que esto escale.
+- **El techo de escritura es MÁS ALTO desplegado que en local** (~90/s vs ~70/s):
+  Vercel levanta más instancias en paralelo que una sola máquina.
+- **Lo único que la nube empeora es la latencia**, ×5 uniforme (19 → 231 ms). Es red y
+  arranque de lambda, **no contención**: apenas se movió entre 5 y 30 altas/s.
+- **Degrada encolando, no fallando.** Pasado el techo, la latencia sube (~1,5 s) pero
+  no hay 5xx ni timeouts.
+
+### Dos trampas que invalidan cualquier medición
+
+1. **Con los limitadores activos no mides la API, mides el `429`** (100 req/15 min por
+   IP; una herramienta de carga es una sola IP). De ahí `RATE_LIMIT_DISABLED`, que se
+   **ignora en producción** — ver [`SECURITY.md`](SECURITY.md) y
+   `utils/rateLimitSkip.js`. En Vercel la señal es `VERCEL_ENV`, porque `NODE_ENV` vale
+   `production` **también en los previews**.
+2. **Con SQLite no mides nada**: serializa las escrituras con un lock de fichero, así
+   que medirías el lock. Misma familia de trampa que la de los ENUM (§8).
+
+**No queda deuda de rendimiento.** El sistema aguanta órdenes de magnitud más de lo que
+la plantilla real necesita. Detalle, cómo reproducirlo y cómo montar/tirar el staging:
+[`k6/README.md`](k6/README.md).
 
 ---
 

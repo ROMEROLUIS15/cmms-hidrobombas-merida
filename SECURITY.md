@@ -69,6 +69,51 @@ Regla de ownership de un reporte: **admin/supervisor siempre**; un técnico acce
 
 ---
 
+## ⚠️ `RATE_LIMIT_DISABLED` — el interruptor que apaga el rate limiting
+
+Existe una variable capaz de **desactivar los tres limitadores**. Está documentada
+aquí, y no escondida, porque una defensa con interruptor solo es segura si todo el
+mundo sabe que el interruptor existe.
+
+**Por qué existe.** Sin ella no se pueden hacer pruebas de carga: el limitador corta
+a las 100 req/15 min **por IP**, y una herramienta de carga lanzada desde una máquina
+es una sola IP. A partir de la petición 101 la API responde `429` sin tocar la base de
+datos, así que no se mide el sistema, se mide el rechazo.
+
+**Por qué es segura.** `backend/src/utils/rateLimitSkip.js` la acota por tres lados:
+
+1. **Se ignora en producción**, esté puesta o no. En Vercel eso se decide por
+   `VERCEL_ENV` (no por `NODE_ENV`, que vale `production` **también en los previews**);
+   fuera de Vercel, por `NODE_ENV`.
+2. **Exige el string `'true'` exacto.** Un `1`, un `yes` o un `false` no desactivan
+   nada: desarmar una protección debe ser un acto deliberado, nunca el efecto
+   colateral de un valor mal escrito.
+3. **Hay un test de regresión que lo vigila**: `k6/scenarios/rate-limit.js` **falla si
+   no aparece ningún `429`**. Si alguien deja el interruptor puesto donde no debe, esa
+   prueba lo caza.
+
+Los 8 tests de `rateLimitSkip.unit.test.js` cubren cada caso, incluido el que de
+verdad importa: `VERCEL_ENV=production` + `RATE_LIMIT_DISABLED=true` → **el límite
+sigue activo**.
+
+### Si levantas un entorno con el interruptor puesto
+
+Un entorno sin rate limiting **no tiene defensa contra la fuerza bruta**. Solo es
+aceptable si está aislado de producción **por construcción, no por confianza**:
+
+- **Base de datos propia y sin datos reales.** Si copias la BD de producción, sus
+  usuarios reales viajan con sus contraseñas: la fuerza bruta contra ese entorno *es*
+  fuerza bruta contra las cuentas de producción.
+- **`JWT_SECRET` y `REFRESH_TOKEN_SECRET` propios.** Si los compartes, un token
+  emitido allí **vale en producción**.
+- **Sin `REDIS_URL` compartido**, para no mezclar los contadores del limitador.
+- **No público**: en Vercel, deja activa la protección de despliegue y entra con un
+  secreto de bypass (`x-vercel-protection-bypass`).
+
+El procedimiento completo (y cómo desmontarlo) está en [`k6/README.md`](k6/README.md).
+
+---
+
 ## Checklist previo al despliegue
 
 - [ ] `JWT_SECRET` y `REFRESH_TOKEN_SECRET` definidos, largos y **distintos entre sí**.
@@ -76,6 +121,10 @@ Regla de ownership de un reporte: **admin/supervisor siempre**; un técnico acce
 - [ ] `FRONTEND_URL` con el/los dominio(s) reales (sin `*`).
 - [ ] `NODE_ENV=production`.
 - [ ] `ALLOW_DESTRUCTIVE_SEED` **no** definido en producción.
+- [ ] `RATE_LIMIT_DISABLED` **no** definido en producción. (El código lo ignora ahí de
+      todos modos, pero una variable así no debe estar puesta ni "por si acaso": el día
+      que alguien toque esa lógica, sería la única línea entre tener rate limiting y no
+      tenerlo.)
 - [ ] `npm audit` revisado (stage no bloqueante en CI).
 
 ---
