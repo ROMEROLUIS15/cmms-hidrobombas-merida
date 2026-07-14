@@ -51,6 +51,26 @@ enfermedad, y estaríamos pagándola por un problema que no existe.
 - Mide contra **Postgres**, nunca contra SQLite (serializa las escrituras con un lock
   de fichero: medirías el lock). Misma familia de trampa que
   [[tests-verde-produccion-rota]].
-- La línea base es de **local**: no predice producción, donde el sospechoso es el pool
-  de conexiones de Neon (plan gratuito). Un `stress` verde en local no autoriza a
-  prometer nada allí. Ver [[prod-neon-database]] y [[upstash-redis-rate-limit]].
+- Ver [[prod-neon-database]] y [[upstash-redis-rate-limit]].
+
+## 3. El pool de conexiones de Neon NO es el cuello de botella (medido en staging)
+
+Sospechábamos que las lambdas, al multiplicarse bajo carga, agotarían las conexiones
+del Neon gratuito y la API se colgaría esperando. **Se montó un staging real (Vercel +
+branch de Neon) para comprobarlo y la hipótesis es FALSA:** con 200 VUs concurrentes y
+~90 escrituras/s → **cero 5xx, cero timeouts, cero errores**.
+
+La razón: Neon se alcanza por el **driver serverless sobre WebSocket/443**, que no
+mantiene una conexión TCP viva por lambda como un `pg` clásico. Es justo la pieza que
+`ARCHITECTURE.md` manda no "simplificar" — y ahora sabemos que además es lo que hace
+que esto escale. Ver [[neon-websocket-driver]].
+
+Datos: el techo de escritura desplegado (~90/s) es **MÁS ALTO que en local** (~70/s);
+Vercel levanta más instancias en paralelo que una sola máquina. Lo único que la nube
+empeora es la **latencia**, ×5 y de forma uniforme (19 → 231 ms en lecturas): es red y
+arranque de lambda, no contención.
+
+**How to apply:** el staging es efímero y está aislado por construcción (BD vaciada sin
+datos reales, `JWT_SECRET` propio, sin `REDIS_URL`, protegido con bypass de Vercel).
+Cómo montarlo y cómo desmontarlo, en `k6/README.md`. **No des por hecho que la nube
+escala peor que tu portátil: mídelo.**

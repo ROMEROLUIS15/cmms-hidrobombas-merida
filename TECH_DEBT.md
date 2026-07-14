@@ -260,3 +260,22 @@ La línea base es **de local**. No predice producción: allí las lambdas son m�
 el sospechoso real es el **pool de conexiones de Neon** (plan gratuito), que localmente
 no se puede reproducir. En local no se rompió nada ni con 200 VUs; eso mide la máquina,
 no el despliegue. **Un `stress` verde en local no autoriza a prometer nada de producción.**
+
+### Actualización (staging real: Vercel + Neon) — la hipótesis del pool era falsa
+
+Lo escrito arriba ("un stress verde en local no autoriza a prometer nada de
+producción") se resolvió midiendo: se montó un staging con la MISMA arquitectura
+(lambdas de Vercel + branch de Neon, driver serverless por WebSocket).
+
+**Con 200 VUs concurrentes y ~90 escrituras/s: cero 5xx, cero timeouts, cero errores.**
+El pool de conexiones **no se agota**, que era justo lo que temíamos. Motivo: el driver
+serverless de Neon va sobre WebSocket/443 y no mantiene una conexión TCP viva por
+lambda (la pieza que `ARCHITECTURE.md` prohíbe "simplificar" a `pg` — resulta que
+además es lo que hace que escale).
+
+El techo de escritura desplegado (~90/s) es **más alto que en local** (~70/s). Lo único
+que la nube empeora es la latencia: ×5 uniforme (19 → 231 ms en lecturas), que es red y
+arranque de lambda, no contención.
+
+**No queda deuda de rendimiento.** El sistema aguanta órdenes de magnitud más de lo que
+la plantilla real necesita. Detalle y cómo reproducirlo: [`k6/README.md`](k6/README.md).

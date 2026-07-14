@@ -78,13 +78,28 @@ export const THRESHOLDS = {
   checks: ['rate>0.99'],
 };
 
-/** Cabeceras base. El JWT viaja en Authorization: Bearer (también acepta cookie). */
+/**
+ * Cabecera de bypass de la protección de despliegue de Vercel.
+ *
+ * El staging NO es público: Vercel Authentication lo protege y responde 302 al SSO.
+ * Dejarlo abierto sería peor idea de lo que parece — es un entorno con los
+ * limitadores DESACTIVADOS, o sea, sin defensa contra fuerza bruta. Así que se
+ * queda protegido y solo k6 pasa, con un secreto de automatización:
+ *
+ *   k6 run ... -e VERCEL_BYPASS=$(grep VERCEL_BYPASS backend/.staging.env | cut -d= -f2)
+ */
+const BYPASS = __ENV.VERCEL_BYPASS
+  ? { 'x-vercel-protection-bypass': __ENV.VERCEL_BYPASS }
+  : {};
+
+/**
+ * Cabeceras de una petición. El JWT viaja en Authorization: Bearer (el backend
+ * también acepta cookie). Con token=null se omite Authorization — así los casos
+ * anónimos (login, el 401 esperado del smoke) siguen llevando el bypass, que si
+ * no se les olvidaría y recibirían un 302 del SSO en vez de la respuesta real.
+ */
 export function headers(token, extra) {
-  return Object.assign(
-    {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    extra || {}
-  );
+  const base = { 'Content-Type': 'application/json' };
+  if (token) base.Authorization = `Bearer ${token}`;
+  return Object.assign(base, BYPASS, extra || {});
 }
