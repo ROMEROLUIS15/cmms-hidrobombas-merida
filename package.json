@@ -16,7 +16,12 @@
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm run test:run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "load:smoke": "k6 run k6/scenarios/smoke.js",
+    "load:test": "k6 run k6/scenarios/load.js",
+    "load:stress": "k6 run k6/scenarios/stress.js",
+    "load:write": "k6 run k6/scenarios/write-flow.js",
+    "load:rate-limit": "k6 run k6/scenarios/rate-limit.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

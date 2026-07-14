@@ -54,6 +54,34 @@ export default [
     },
   },
 
+  // ── Pruebas de carga (k6) ─────────────────────────────────────────────────
+  // k6 NO es Node: corre los scripts en su propio runtime (goja), con módulos ES
+  // y unos globales propios (__ENV, __VU, __ITER). Sin este bloque, ESLint
+  // parsearía estos .js como CommonJS y los `import` reventarían el lint de CI.
+  {
+    files: ['k6/**/*.js'],
+    ...pluginJs.configs.recommended,
+    languageOptions: {
+      globals: {
+        __ENV: 'readonly',
+        __VU: 'readonly',
+        __ITER: 'readonly',
+        console: 'readonly',
+      },
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // En k6 la consola es la salida legítima del teardown/summary.
+      'no-console': 'off',
+      'eqeqeq': ['error', 'always'],
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'curly': ['error', 'multi-line'],
+    },
+  },
+
   // ── Backend (Node.js / CommonJS) ──────────────────────────────────────────
   {
     files: ['backend/src/**/*.js'],
