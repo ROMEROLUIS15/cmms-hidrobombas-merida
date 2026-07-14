@@ -24,6 +24,12 @@ npm run test:e2e         # playwright (boots `npm run dev` itself)
 npm run lint -w backend  # eslint, --max-warnings=0
 npm run lint -w frontend
 npx eslint . --max-warnings=0   # what CI actually runs (root eslint.config.mjs)
+
+npm run load:smoke       # k6: ¿responde todo? empieza siempre por aquí
+npm run load:test        # k6: carga sostenida (lecturas, la mezcla real)
+npm run load:write       # k6: alta de reporte + PDF (donde está el cuello de botella)
+npm run load:stress      # k6: hasta romperlo
+npm run load:rate-limit  # k6: verifica que el limitador sigue cortando
 ```
 
 Single test:
@@ -126,6 +132,23 @@ Three limiters in `app.js` (auth 15/15min, api 100/15min, ai `AI_RATE_LIMIT_MAX`
 
 **LangChain dependencies are fragile in production:** bumping them (or running `npm audit fix`) has broken the Vercel deploy while all tests stayed green. Verify a Vercel preview before merging any change to those packages.
 
+### Load testing (k6)
+
+Scripts live in `k6/` (see [`k6/README.md`](k6/README.md)). Two things invalidate any measurement here:
+
+- **The rate limiters must be off, or you measure the 429 and not the API.** `apiLimiter` cuts at 100 req/15min *per IP*, and k6 from one machine is one IP; past request 101 Express short-circuits before touching the DB and the latencies look fantastic. Start the backend with `RATE_LIMIT_DISABLED=true` — `utils/rateLimitSkip.js` honours it **only outside production**, and `k6/lib/setup.js` refuses to run if it detects the limiter still counting. The one exception is `k6/scenarios/rate-limit.js`, which asserts the limiter *does* engage (a `429` count of zero fails the run) — that's the regression test guarding the kill switch.
+- **Measure against Postgres, never SQLite.** SQLite serialises writes on a file lock, so a write scenario against it measures the lock.
+
+The suspected bottleneck is `utils/reportNumber.js`: every report creation opens a transaction and `SELECT … FOR UPDATE`s **the same counter row**, so report creation is globally serialised. **Measured, that ceiling is ~70 reports/s** (local Postgres), and past it the system degrades by queueing — latency climbs to ~1s, zero errors. For a handful of technicians filing a few reports a day that is orders of magnitude of headroom: it is a *theoretical* bottleneck, **don't optimise it**. Removing the lock would bring back duplicated report numbers. Baseline figures for every scenario are in `k6/README.md` — reproduce them before claiming a perf regression.
+
+### Services: PDF, email, Neon keep-alive
+
+`backend/src/services/` holds the three side-effecting pieces of the report flow.
+
+- `pdfService.js` (pdfkit) renders the report; the company header (RIF, phone, contact email, signature holder) is real data printed on every report — several commits exist just to fix it. Don't invent placeholder values there.
+- `emailService.js` tries providers **in order and stops at the first one configured**: SMTP (`SMTP_USER`+`SMTP_PASS`) → Brevo (`BREVO_API_KEY`) → Resend (`RESEND_API_KEY`) → **simulated** when none is set, which is what keeps tests and CI from sending real mail. Every path returns the same contract (`{simulated}` | `{success:true, messageId?}` | `{success:false, error}`), so callers must never branch on the provider. In development, `EMAIL_DEV_OVERRIDE_TO` (or `RESEND_DEV_OVERRIDE_TO`) redirects **all** mail to a test address — real clients are on the other side of these addresses.
+- `neonKeepAlive.js` pings the DB every `NEON_KEEP_ALIVE_INTERVAL` (default 10 min) because Neon's free tier drops idle connections at ~15 min. Disable with `NEON_KEEP_ALIVE_ENABLED=false`. See `NEON_KEEP_ALIVE_GUIDE.md`.
+
 ### Frontend
 
 - **Every API call must be absolute**, built from `import.meta.env.VITE_API_URL`. The frontend is static hosting on a *different* Vercel domain than the backend: a relative `/api/...` POSTs to itself and gets a **405**. This is not hypothetical — it silently killed the AI assistant.
@@ -136,7 +159,8 @@ Three limiters in `app.js` (auth 15/15min, api 100/15min, ai `AI_RATE_LIMIT_MAX`
 
 ## Conventions and gotchas
 
-- **npm workspaces:** the only lockfile that counts is the root `package-lock.json`. Audit there, not per-workspace. A clean install from scratch fails on peer deps (ERESOLVE) — don't delete the lock to "fix" things; use `--legacy-peer-deps` if you must.
+- **npm workspaces:** the only lockfile that counts is the root `package-lock.json`. Audit there, not per-workspace. A clean install from scratch fails on peer deps (ERESOLVE) — don't delete the lock to "fix" things; use `--legacy-peer-deps` if you must. Ignore the stale `"packageManager": "yarn@1.22.22"` left in `frontend/package.json` by the original CRA scaffold: the project is npm-only, nothing reads it today, and "fixing" it by actually running yarn would fork the lockfile.
+- **CI (`.github/workflows/ci.yml`) is five jobs:** root lint (blocking), `npm audit --audit-level=high` (**non**-blocking on purpose — the dependency tree isn't clean yet), frontend Vitest, backend Jest on SQLite (via `test:coverage`), and backend Jest on real Postgres. Only the last one validates enums and UUIDs.
 - **Husky hooks:** `pre-commit` lints both workspaces, `pre-push` runs both test suites. Do not bypass with `--no-verify`.
 - Conventional Commits. PRs in practice merge to `main` (the README still says `develop`).
 - Integration tests must create their fixtures in `beforeEach` and use the returned IDs — never hardcode IDs.

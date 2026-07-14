@@ -305,7 +305,7 @@ La lógica de ownership vive en `backend/src/utils/ownership.js` y se aplica en 
 
 ```bash
 # Backend (Jest + Supertest)
-cd backend && npm test                 # 385 tests (unit + integración)
+cd backend && npm test                 # 390 tests (unit + integración)
 cd backend && npm run test:coverage    # con cobertura
 
 # Frontend (Vitest + Testing Library)
@@ -330,6 +330,38 @@ Si tocas el job de Postgres, ten presente que `src/__tests__/setup.js` hace
 `test`** — esa salvaguarda evita borrar producción por un `DATABASE_URL` mal puesto. No la quites.
 
 Además, el CI corre lint y `npm audit` sobre ambos workspaces.
+
+### ⚡ Pruebas de carga y rendimiento (k6)
+
+Cinco escenarios en [`k6/`](k6/) que miden la **API** (el frontend es hosting estático:
+su rendimiento es cuestión de bundle y CDN, no de concurrencia):
+
+```bash
+npm run load:smoke        # ¿responde todo? empieza SIEMPRE por aquí
+npm run load:test         # carga sostenida: 20 técnicos concurrentes
+npm run load:write        # alta de reporte + PDF (el camino de escritura)
+npm run load:stress       # hasta romperlo
+npm run load:rate-limit   # verifica que el limitador sigue cortando
+```
+
+**Dos cosas invalidan la medición, y ninguna avisa:**
+
+1. **Con los limitadores activos no mides la API, mides el 429.** El limitador corta a
+   las 100 req/15 min *por IP*, y k6 desde una máquina es una sola IP: a partir de ahí
+   Express responde sin tocar la base de datos. Arranca el backend con
+   `RATE_LIMIT_DISABLED=true` (**se ignora en producción a propósito**). Los escenarios
+   se niegan a correr si detectan el limitador puesto.
+2. **Mide contra PostgreSQL, nunca contra SQLite**, que serializa las escrituras con un
+   lock de fichero: medirías el lock.
+
+**Línea base medida** (local, Postgres 16 en Docker — sirve para detectar regresiones,
+**no** para predecir producción): lecturas con 20 usuarios concurrentes a **p95 19 ms**;
+`stress` hasta 200 VUs sin un solo 5xx; y el techo de escritura en **~70 reportes/s**,
+donde degrada encolando (latencia ~1 s) en vez de fallar. Ese techo lo impone el bloqueo
+de fila de `utils/reportNumber.js`, que garantiza que ningún `SRV-XXXX` se repita:
+**es un cuello de botella teórico, no un problema real — no lo optimices.**
+
+Detalle completo, puesta en marcha y cómo leer los resultados: [`k6/README.md`](k6/README.md).
 
 ---
 
