@@ -40,7 +40,7 @@ npm test -w backend -- -t "nombre del test"
 npm run test:run -w frontend -- src/__tests__/hooks/useOfflineQueue.test.jsx
 ```
 
-`npm test -w backend` runs against **SQLite** (385 tests). The CI *also* runs the same suite against a real **Postgres** service — that second job is the one that catches enum/UUID bugs, and it needs `--runInBand` because the Jest workers share one database. To reproduce it you need a Postgres whose database name contains `test` (see the DROP SCHEMA guard below).
+`npm test -w backend` runs against **SQLite** (393 tests). The CI *also* runs the same suite against a real **Postgres** service — that second job is the one that catches enum/UUID bugs, and it needs `--runInBand` because the Jest workers share one database. To reproduce it you need a Postgres whose database name contains `test` (see the DROP SCHEMA guard below).
 
 Backend-only utilities (run inside `backend/`):
 

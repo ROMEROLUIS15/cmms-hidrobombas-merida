@@ -305,7 +305,7 @@ La lógica de ownership vive en `backend/src/utils/ownership.js` y se aplica en 
 
 ```bash
 # Backend (Jest + Supertest)
-cd backend && npm test                 # 390 tests (unit + integración)
+cd backend && npm test                 # 393 tests (unit + integración)
 cd backend && npm run test:coverage    # con cobertura
 
 # Frontend (Vitest + Testing Library)
@@ -389,11 +389,16 @@ Build del frontend: `cd frontend && npm run build` (salida en `frontend/build/`)
 
 | Documento | Contenido |
 |-----------|-----------|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Decisiones de diseño del monorepo, BD dual y patrones. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Decisiones de diseño del monorepo, BD dual y patrones. **§8 lecciones de producción, §9 rendimiento medido.** |
+| [`SECURITY.md`](SECURITY.md) | Autenticación, autorización, rate limiting y checklist previo al despliegue. |
+| [`TECH_DEBT.md`](TECH_DEBT.md) | El **porqué** de cada deuda técnica (y de lo que se decidió NO arreglar). |
+| [`PENDING_TASKS.md`](PENDING_TASKS.md) | El **qué hay que hacer**: checklist accionable con evidencia (archivo:línea). |
+| [`k6/README.md`](k6/README.md) | Pruebas de carga: escenarios, línea base medida y cómo montar/tirar el staging. |
 | [`API_REFERENCE.md`](API_REFERENCE.md) | Referencia de endpoints de IA (Agent Maestro). |
 | [`AGENT_MAESTRO_GUIDE.md`](AGENT_MAESTRO_GUIDE.md) | Guía del orquestador de IA. |
 | [`LANGCHAIN_CASOS_USO.md`](LANGCHAIN_CASOS_USO.md) | Casos de uso de LangChain. |
 | [`NEON_KEEP_ALIVE_GUIDE.md`](NEON_KEEP_ALIVE_GUIDE.md) | Mantener viva la conexión Neon (plan free). |
+| [`memory/MEMORY.md`](memory/MEMORY.md) | Índice de trampas conocidas (deploy, dependencias, Groq, SQLite/Postgres). |
 
 ---
 

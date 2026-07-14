@@ -77,3 +77,16 @@ nadie los "arregle" otra vez:
 - **Deps de Swagger sin usar** → **RESUELTO.** `openspec`, `swagger-jsdoc` y
   `swagger-ui-express` **ya no están** en `backend/package.json`: se revirtieron al no
   haber ningún archivo que las importara. Se reinstalarán junto con el código que las use.
+
+- **Rendimiento bajo carga** → **VERIFICADO, no es deuda (2026-07-13).** Se midió con k6
+  contra PostgreSQL real y contra un staging con la arquitectura de producción (lambdas de
+  Vercel + branch de Neon): **200 VUs concurrentes y ~90 altas de reporte/s con cero 5xx**.
+  Las dos sospechas que había eran **falsas**:
+  - *El bloqueo de fila del contador (`utils/reportNumber.js`) no escala* → escala hasta
+    ~90 altas/s y degrada encolando, no fallando. **NO lo optimices:** quitar el lock
+    reintroduce números `SRV-XXXX` duplicados a cambio de un problema que no existe.
+  - *El pool de conexiones de Neon reventará* → no revienta; el driver serverless va sobre
+    WebSocket/443 y no mantiene una conexión TCP viva por lambda.
+
+  Línea base, escenarios y cómo reproducirlo: [`k6/README.md`](k6/README.md).
+  Ver también [`ARCHITECTURE.md`](ARCHITECTURE.md) §9 y [`TECH_DEBT.md`](TECH_DEBT.md) #7.
