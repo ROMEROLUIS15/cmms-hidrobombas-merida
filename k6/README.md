@@ -114,6 +114,97 @@ rendimiento.
 | `write-flow` (150 altas/s) | **techo: ~70/s**, p95 **1,06 s**, 2316 descartadas, 0 errores |
 | `rate-limit` | corta exactamente en **100**: 99 servidas + 21 × `429` |
 
+## Línea base en STAGING — Vercel + Neon (2026-07-13)
+
+El entorno que de verdad importa: lambdas de Vercel contra Neon, con el driver
+serverless por WebSocket. **Aquí sí se mide el pool de conexiones**, que en local
+no se puede reproducir.
+
+| Escenario | Local (Docker PG) | **Staging (Vercel + Neon)** |
+|---|---|---|
+| `load` — 20 VUs, lecturas | p95 19 ms | **p95 231 ms**, 0 fallos |
+| `stress` — hasta 200 VUs | p95 41 ms, 0 5xx | **p95 276 ms, 113 req/s, 0 5xx** |
+| `write-flow` — 5 altas/s | p95 44 ms | **p95 252 ms**, 0 errores |
+| `write-flow` — techo | ~70/s | **~90/s**, p95 1,47 s, **0 errores** |
+
+### El resultado desmiente la hipótesis
+
+Se montó este staging porque **sospechábamos del pool de conexiones de Neon**: la
+teoría era que las lambdas, al multiplicarse bajo carga, agotarían las conexiones
+del plan gratuito y la API se colgaría esperando en vez de fallar limpiamente.
+
+**No ocurre.** Con 200 VUs concurrentes y ~90 escrituras/s: **cero 5xx, cero
+timeouts, cero errores**. El pool no se agotó. La explicación es que Neon se
+alcanza por el **driver serverless sobre WebSocket/443**, que no mantiene una
+conexión TCP viva por lambda como un `pg` clásico — justo la pieza que
+`ARCHITECTURE.md` advierte de no "simplificar".
+
+Y el techo de escritura **es MÁS ALTO desplegado que en local** (~90/s frente a
+~70/s): Vercel levanta más instancias en paralelo de las que da una sola máquina.
+
+**Lo único que la nube empeora es la latencia**, ×5 de forma bastante uniforme
+(19 → 231 ms en lecturas). Es red y arranque de lambda, no contención: la latencia
+apenas se movió entre 5 y 30 altas/s.
+
+**Conclusión para el negocio: el sistema aguanta ~90 reportes/s y 200 usuarios
+concurrentes sin un solo error.** La plantilla real está órdenes de magnitud por
+debajo. No hay nada que optimizar aquí.
+
+## El staging: cómo se monta (y se tira)
+
+> ⚠️ **El staging YA NO EXISTE.** Se levantó, se midió y se desmontó el 2026-07-13:
+> la branch de Neon consume del plan gratuito (0.5 GB compartidos con producción) y
+> no tiene sentido pagar almacenamiento por un entorno que se usa una tarde. Las
+> cifras de arriba siguen siendo válidas como línea base. **Para volver a medir hay
+> que recrearlo** siguiendo estos pasos.
+
+Efímero y **aislado de producción por construcción**, no por confianza:
+
+- **BD:** branch `staging-load` en Neon (proyecto `hidrobombas-merida`), creada
+  desde `production` y **vaciada acto seguido** (`DROP SCHEMA` + migraciones). Cero
+  datos reales: un staging con los limitadores abiertos y usuarios de verdad sería
+  fuerza bruta servida en bandeja.
+- **App:** proyecto Vercel `cmms-backend-staging`, conectado al repo (mismo
+  mecanismo de build que producción: instala desde la raíz con el lockfile de
+  workspaces — un deploy por CLI instala dentro de `backend/`, sin lockfile, y
+  muere con ERESOLVE).
+- **Secretos propios:** `JWT_SECRET` y `REFRESH_TOKEN_SECRET` nuevos. Un token
+  emitido en staging **no vale en producción**.
+- **Sin `REDIS_URL`:** no comparte los contadores del rate limit con producción.
+- **`RATE_LIMIT_DISABLED=true`** en el scope Preview. Funciona porque
+  `VERCEL_ENV=preview`; en el deploy de producción se ignoraría.
+- **Protegido:** Vercel Authentication sigue activa. k6 entra con un secreto de
+  bypass (`x-vercel-protection-bypass`), guardado en `backend/.staging.env`
+  (gitignored). La URL NO es pública.
+
+```bash
+BYPASS=$(grep '^VERCEL_BYPASS=' backend/.staging.env | cut -d= -f2-)
+k6 run k6/scenarios/load.js \
+  -e BASE_URL=https://cmms-backend-staging-<hash>-luis-romeros-projects.vercel.app \
+  -e ALLOW_REMOTE=true -e VERCEL_BYPASS="$BYPASS" \
+  -e ADMIN_EMAIL=k6@staging.test -e ADMIN_PASSWORD='K6staging!2026'
+```
+
+**Para desmontarlo cuando acabes de medir** — hazlo, no lo dejes ahí: la branch
+consume del plan gratuito de Neon (0.5 GB compartidos con producción) y el entorno
+tiene los limitadores desactivados.
+
+```bash
+# 1. Borrar la branch de Neon (saca el <branch-id> de /branches)
+curl -X DELETE -H "Authorization: Bearer $NEON_API_KEY" \
+  https://console.neon.tech/api/v2/projects/noisy-fog-06869960/branches/<branch-id>
+
+# 2. Borrar el proyecto de Vercel (el CLI pide confirmación interactiva; por API no)
+curl -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" \
+  "https://api.vercel.com/v9/projects/cmms-backend-staging?teamId=<team-id>"
+
+# 3. Restos locales
+rm -rf backend/.vercel backend/.env.local backend/.staging.env
+```
+
+Y **revoca la `NEON_API_KEY`** si no la vas a reutilizar: da acceso a toda la cuenta
+de Neon, producción incluida.
+
 ## Los dos cuellos de botella conocidos
 
 No hacía falta una prueba para sospecharlos. La prueba sirvió para **cuantificarlos**,
@@ -139,10 +230,14 @@ una lambda compite con todo lo demás. `write-flow.js` lo mide aparte
 (`pdf_duration`) para poder decidir con datos, y no por intuición, si algún día hay
 que sacarlo del camino síncrono.
 
-**Lo que estas pruebas NO dicen.** En local no se rompió nada ni con 200 VUs. Eso
-mide la máquina, no producción: allí el sospechoso es el **pool de conexiones** de
-Neon (plan gratuito, pocas conexiones), que no se puede reproducir aquí. Un `stress`
-verde en local no autoriza a prometer nada sobre producción.
+**Lo que estas pruebas NO dicen.** El staging comparte arquitectura con producción
+(lambdas + Neon) pero **no su base de datos ni su volumen de datos**: mide con datos
+sintéticos, no con los 30 MB reales, y una consulta sin índice que hoy va sobrada
+puede degradarse cuando la tabla crezca. Tampoco mide la Neon de producción, cuyo
+plan y límites son los mismos pero cuya carga real es otra.
+
+Lo que sí quedó demostrado es que **la arquitectura serverless no es el cuello de
+botella** — que es exactamente lo que se sospechaba y no era cierto.
 
 ## Cómo leer los resultados
 

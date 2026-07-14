@@ -64,7 +64,6 @@ export function setup() {
 }
 
 export default function (data) {
-  const auth = headers(data.token);
   let reportId;
 
   group('crear reporte', () => {
@@ -109,7 +108,7 @@ export default function (data) {
   if (reportId) {
     group('descargar PDF', () => {
       const res = http.get(`${API}/service-reports/${reportId}/pdf`, {
-        headers: { Authorization: auth.Authorization },
+        headers: headers(data.token),
         tags: { name: 'GET /service-reports/:id/pdf' },
       });
 

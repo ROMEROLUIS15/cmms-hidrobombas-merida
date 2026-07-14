@@ -29,7 +29,10 @@ export default function (data) {
   const auth = { headers: headers(data.token) };
 
   group('salud pública', () => {
-    const res = http.get(`${API}/health`, { tags: { name: 'GET /health' } });
+    const res = http.get(`${API}/health`, {
+      headers: headers(null),
+      tags: { name: 'GET /health' },
+    });
     check(res, { 'health 200': (r) => r.status === 200 });
   });
 
@@ -80,6 +83,7 @@ export default function (data) {
     // exige— envenenaba http_req_failed (8,33%) y hacía fallar el umbral con
     // los 9 checks en verde. Aquí el 401 ES la respuesta esperada.
     const res = http.get(`${API}/clients`, {
+      headers: headers(null), // sin JWT, pero CON el bypass de Vercel
       tags: { name: 'GET /clients (sin token)' },
       responseCallback: http.expectedStatuses(401),
     });

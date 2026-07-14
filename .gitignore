@@ -109,3 +109,6 @@ credentials.json
 *.key
 .credentials
 node_modules
+
+# Credencial local para montar el staging (NUNCA se commitea)
+.neon.key

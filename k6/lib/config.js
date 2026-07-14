@@ -16,28 +16,48 @@ export const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@hidrobombas.test';
 export const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'Admin12345';
 
 /**
- * Guardarraíl: NO se dispara carga contra producción por accidente.
+ * Guardarraíl en dos niveles: PRODUCCIÓN nunca; el resto de entornos remotos,
+ * solo a conciencia.
  *
- * Esto no es celo excesivo. El backend vive en lambdas de Vercel y la BD es un
- * Neon de plan gratuito: unos cientos de peticiones concurrentes agotan las
- * conexiones y tiran el sistema a los usuarios reales. Y como las pruebas de
- * escritura CREAN clientes, equipos y reportes, además dejarían basura en la
- * base de datos de la empresa, con números de reporte (SRV-XXXX) consumidos
- * para siempre: el contador nunca reutiliza un número.
+ * Esto no es celo excesivo. Una prueba de carga contra producción agota las
+ * conexiones del Neon gratuito y tira el sistema a los usuarios reales. Y como
+ * las pruebas de escritura CREAN clientes, equipos y reportes, dejaría basura en
+ * la base de datos de la empresa con números de reporte (SRV-XXXX) consumidos
+ * para siempre: el contador nunca reutiliza un número, así que ni borrando las
+ * filas se vuelve al estado anterior.
  *
- * Si alguna vez hay que medir producción de verdad, que sea un acto consciente:
- *   k6 run ... -e BASE_URL=https://... -e I_KNOW_THIS_IS_PROD=true
+ * Los dominios de producción se bloquean **sin escapatoria**: no hay flag que
+ * los habilite. Una prueba de carga contra producción nunca es lo que quieres, y
+ * un `-e` de más a las 2 de la mañana no puede ser lo único que lo impida.
+ *
+ * El staging (que sí hay que poder medir: el pool de conexiones de Neon solo
+ * existe desplegado) es remoto pero no producción, así que exige un opt-in:
+ *   k6 run ... -e BASE_URL=https://<staging>.vercel.app -e ALLOW_REMOTE=true
  */
-const REMOTE = /vercel\.app|hidrobombas|neon\.tech/i;
+const PROD_HOSTS = [
+  'cmms-hidrobombas-merida-backend.vercel.app',
+  'hidrobombas-merida.vercel.app',
+];
 
-if (REMOTE.test(BASE_URL) && __ENV.I_KNOW_THIS_IS_PROD !== 'true') {
+const isProdHost = PROD_HOSTS.some((host) => BASE_URL.includes(host));
+const isRemote = /^https?:\/\/(?!localhost|127\.0\.0\.1)/i.test(BASE_URL);
+
+if (isProdHost) {
+  throw new Error(
+    `\n\n  ⛔  BASE_URL apunta a PRODUCCIÓN (${BASE_URL}).\n` +
+    '      Esto no tiene override, y es a propósito: la carga agotaría las\n' +
+    '      conexiones de Neon dejando sin servicio a los usuarios reales, y\n' +
+    '      crearía clientes, equipos y reportes que NO se pueden borrar\n' +
+    '      limpiamente (el contador nunca reutiliza un SRV-XXXX).\n\n' +
+    '      Mide contra staging o contra local.\n'
+  );
+}
+
+if (isRemote && __ENV.ALLOW_REMOTE !== 'true') {
   throw new Error(
     `\n\n  ⛔  BASE_URL apunta a un entorno remoto (${BASE_URL}).\n` +
-    '      Una prueba de carga contra producción agota las conexiones de Neon\n' +
-    '      (plan gratuito) y crea clientes/equipos/reportes REALES que no se\n' +
-    '      pueden borrar limpiamente.\n\n' +
-    '      Levanta el backend en local y usa el BASE_URL por defecto.\n' +
-    '      Si de verdad quieres medir remoto: -e I_KNOW_THIS_IS_PROD=true\n'
+    '      Comprueba que NO comparte base de datos con producción y repite con:\n' +
+    '        -e ALLOW_REMOTE=true\n'
   );
 }
 
@@ -58,13 +78,28 @@ export const THRESHOLDS = {
   checks: ['rate>0.99'],
 };
 
-/** Cabeceras base. El JWT viaja en Authorization: Bearer (también acepta cookie). */
+/**
+ * Cabecera de bypass de la protección de despliegue de Vercel.
+ *
+ * El staging NO es público: Vercel Authentication lo protege y responde 302 al SSO.
+ * Dejarlo abierto sería peor idea de lo que parece — es un entorno con los
+ * limitadores DESACTIVADOS, o sea, sin defensa contra fuerza bruta. Así que se
+ * queda protegido y solo k6 pasa, con un secreto de automatización:
+ *
+ *   k6 run ... -e VERCEL_BYPASS=$(grep VERCEL_BYPASS backend/.staging.env | cut -d= -f2)
+ */
+const BYPASS = __ENV.VERCEL_BYPASS
+  ? { 'x-vercel-protection-bypass': __ENV.VERCEL_BYPASS }
+  : {};
+
+/**
+ * Cabeceras de una petición. El JWT viaja en Authorization: Bearer (el backend
+ * también acepta cookie). Con token=null se omite Authorization — así los casos
+ * anónimos (login, el 401 esperado del smoke) siguen llevando el bypass, que si
+ * no se les olvidaría y recibirían un 302 del SSO en vez de la respuesta real.
+ */
 export function headers(token, extra) {
-  return Object.assign(
-    {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    extra || {}
-  );
+  const base = { 'Content-Type': 'application/json' };
+  if (token) base.Authorization = `Bearer ${token}`;
+  return Object.assign(base, BYPASS, extra || {});
 }

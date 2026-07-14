@@ -121,3 +121,9 @@ dist/
 *.njsproj
 *.sln
 *.sw?
+
+# Connection string del staging de carga (NUNCA se commitea)
+.staging.env
+
+.vercel
+.env*

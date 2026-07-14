@@ -23,7 +23,7 @@ export function login(email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
   const res = http.post(
     `${API}/auth/login`,
     JSON.stringify({ email, password }),
-    { headers: { 'Content-Type': 'application/json' }, tags: { name: 'POST /auth/login' } }
+    { headers: headers(null), tags: { name: 'POST /auth/login' } }
   );
 
   if (res.status !== 200) {
