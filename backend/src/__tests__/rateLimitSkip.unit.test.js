@@ -34,4 +34,42 @@ describe('shouldSkipRateLimit', () => {
     expect(shouldSkipRateLimit({ NODE_ENV: 'development', RATE_LIMIT_DISABLED: '1' })).toBe(false);
     expect(shouldSkipRateLimit({ NODE_ENV: 'development', RATE_LIMIT_DISABLED: 'false' })).toBe(false);
   });
+
+  // ── En Vercel manda VERCEL_ENV, no NODE_ENV ────────────────────────────────
+  // TODO deploy de Vercel corre con NODE_ENV=production, también los previews y
+  // el staging. Guiarse solo por NODE_ENV haría el interruptor inútil en
+  // cualquier entorno desplegado — y el cuello de botella que interesa medir
+  // (el pool de conexiones de Neon) SOLO existe desplegado.
+
+  it('salta el límite en un preview de Vercel, pese a NODE_ENV=production', () => {
+    expect(
+      shouldSkipRateLimit({
+        NODE_ENV: 'production',
+        VERCEL: '1',
+        VERCEL_ENV: 'preview',
+        RATE_LIMIT_DISABLED: 'true',
+      })
+    ).toBe(true);
+  });
+
+  it('IGNORA el interruptor en el deploy de PRODUCCIÓN de Vercel', () => {
+    // El caso que de verdad protege: VERCEL_ENV=production manda por encima de
+    // todo. Si alguien copia RATE_LIMIT_DISABLED=true al scope de Production, no
+    // pasa nada.
+    expect(
+      shouldSkipRateLimit({
+        NODE_ENV: 'production',
+        VERCEL: '1',
+        VERCEL_ENV: 'production',
+        RATE_LIMIT_DISABLED: 'true',
+      })
+    ).toBe(false);
+  });
+
+  it('en un preview de Vercel SIN el interruptor, el límite sigue activo', () => {
+    // Los previews son públicos: no pueden quedarse sin limitador por defecto.
+    expect(
+      shouldSkipRateLimit({ NODE_ENV: 'production', VERCEL: '1', VERCEL_ENV: 'preview' })
+    ).toBe(false);
+  });
 });
