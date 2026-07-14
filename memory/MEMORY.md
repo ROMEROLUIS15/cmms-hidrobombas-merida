@@ -16,3 +16,4 @@
 - [El frontend debe usar URL absoluta](frontend-url-api-absoluta.md) — frontend y backend son dominios distintos; una ruta relativa `/api/...` da 405 y dejó el asistente de IA muerto desde el día uno
 - [BD de producción (Neon)](prod-neon-database.md) — cuál es la Neon buena; Vercel apuntó a una vacía y el login daba 500 con "relation users does not exist"
 - [El geo-bloqueo de Groq oculta keys muertas](groq-geoblock-masks-invalid-key.md) — desde local nunca sabrás si la API key sirve; mirar `groq_key_status`, no `groq_configured`
+- [Pruebas de carga (k6)](k6-pruebas-de-carga.md) — con los limitadores puestos mides el 429, no la API; y el lock del contador de reportes tiene techo ~70/s: NO optimizarlo

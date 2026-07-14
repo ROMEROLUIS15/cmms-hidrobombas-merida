@@ -216,3 +216,47 @@ funcionado. Ver #2.
 **Arreglo:** intentar los proveedores en cascada ante un fallo de envío (no ante un fallo de
 configuración), con log de cada intento. Ojo con no reintentar errores permanentes (p. ej.
 destinatario inválido): solo tiene sentido ante fallos del proveedor.
+
+---
+
+## 7. Rendimiento — medido con k6 (2026-07-13): el sospechoso obvio NO es el problema
+
+Suite de carga en [`k6/`](k6/). Cinco escenarios ejecutados **contra PostgreSQL real**,
+no solo escritos. Línea base completa en [`k6/README.md`](k6/README.md).
+
+### El bloqueo del contador de reportes no hay que optimizarlo
+
+`utils/reportNumber.js` abre una transacción y bloquea con `SELECT … FOR UPDATE` **la
+misma fila** del contador en cada alta: **todas las altas de reporte se serializan**. Es
+el candidato evidente a "arreglar"... y sería un error.
+
+**Medido: el techo son ~70 altas/s**, y al superarlo el sistema **degrada encolando, no
+fallando** (latencia hasta 1 s, cero errores, ningún 5xx). Una plantilla de técnicos que
+registra unos pocos reportes al día está varios órdenes de magnitud por debajo.
+
+Quitar el lock devolvería números `SRV-XXXX` duplicados o reutilizados tras un borrado.
+**La cura sería peor que la enfermedad, y para un problema que no existe.** Si algún día
+apretara de verdad: acortar la transacción o pasar a una secuencia nativa de Postgres —
+nunca eliminar la garantía.
+
+Lección transversal: la intuición señaló el **sitio** correcto y la **conclusión**
+equivocada. Medir antes de optimizar.
+
+### Riesgo asumido: `RATE_LIMIT_DISABLED`
+
+Medir con k6 exige poder apagar los limitadores (100 req/15 min por IP convierten
+cualquier prueba de carga en una medición del 429). Ese interruptor
+(`utils/rateLimitSkip.js`) **apaga una defensa**, así que se acota por tres lados:
+
+1. **Se ignora en producción**, aunque la variable esté puesta.
+2. Exige el string `'true'` exacto: desarmar una protección no puede ser el efecto
+   colateral de un valor mal escrito.
+3. `k6/scenarios/rate-limit.js` **falla si no aparece ningún 429** — es el test de
+   regresión que caza el día que alguien lo deje puesto donde no debe.
+
+### Lo que estas pruebas NO cubren
+
+La línea base es **de local**. No predice producción: allí las lambdas son más lentas y
+el sospechoso real es el **pool de conexiones de Neon** (plan gratuito), que localmente
+no se puede reproducir. En local no se rompió nada ni con 200 VUs; eso mide la máquina,
+no el despliegue. **Un `stress` verde en local no autoriza a prometer nada de producción.**
