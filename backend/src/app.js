@@ -11,6 +11,7 @@ const { idempotencyMiddleware } = require('./middleware/idempotencyMiddleware');
 const { correlationId, CORRELATION_HEADER } = require('./middleware/correlationId');
 const { createRateLimitStore } = require('./config/rateLimitStore');
 const { resolveTrustProxy } = require('./utils/trustProxy');
+const { shouldSkipRateLimit } = require('./utils/rateLimitSkip');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
@@ -90,8 +91,14 @@ app.get('/', (req, res) => {
 });
 
 // ── Rate Limiting ──────────────────────────────────────────────────────
-// skip() desactiva el límite en tests para que los integration tests no sean bloqueados
-const isTestEnv = () => process.env.NODE_ENV === 'test';
+// skip() desactiva el límite en tests (para que los integration tests no se
+// bloqueen a sí mismos) y con RATE_LIMIT_DISABLED=true fuera de producción
+// (para poder medir con k6). Ver utils/rateLimitSkip.js para el porqué de cada
+// caso y de por qué en producción no hay interruptor que valga.
+// El wrapper NO sobra: express-rate-limit llama a skip(req, res), así que pasar
+// shouldSkipRateLimit directamente le pasaría `req` como si fuera el entorno y
+// devolvería siempre undefined (= no saltar nunca, ni en tests).
+const skipRateLimit = () => shouldSkipRateLimit();
 
 // Store compartido (Redis) si REDIS_URL está configurada; si no, cada limiter
 // cae al MemoryStore por defecto. Cada uno usa su propio prefijo para no
@@ -100,7 +107,7 @@ const isTestEnv = () => process.env.NODE_ENV === 'test';
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 15, // máximo 15 intentos por ventana
-  skip: isTestEnv,
+  skip: skipRateLimit,
   standardHeaders: true,
   legacyHeaders: false,
   store: createRateLimitStore('rl:auth:'),
@@ -113,7 +120,7 @@ const authLimiter = rateLimit({
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  skip: isTestEnv,
+  skip: skipRateLimit,
   standardHeaders: true,
   legacyHeaders: false,
   store: createRateLimitStore('rl:api:'),
@@ -128,7 +135,7 @@ const apiLimiter = rateLimit({
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.AI_RATE_LIMIT_MAX) || 30,
-  skip: isTestEnv,
+  skip: skipRateLimit,
   standardHeaders: true,
   legacyHeaders: false,
   store: createRateLimitStore('rl:ai:'),
