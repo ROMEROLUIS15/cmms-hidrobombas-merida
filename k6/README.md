@@ -150,7 +150,13 @@ apenas se movió entre 5 y 30 altas/s.
 concurrentes sin un solo error.** La plantilla real está órdenes de magnitud por
 debajo. No hay nada que optimizar aquí.
 
-## El staging: cómo está montado
+## El staging: cómo se monta (y se tira)
+
+> ⚠️ **El staging YA NO EXISTE.** Se levantó, se midió y se desmontó el 2026-07-13:
+> la branch de Neon consume del plan gratuito (0.5 GB compartidos con producción) y
+> no tiene sentido pagar almacenamiento por un entorno que se usa una tarde. Las
+> cifras de arriba siguen siendo válidas como línea base. **Para volver a medir hay
+> que recrearlo** siguiendo estos pasos.
 
 Efímero y **aislado de producción por construcción**, no por confianza:
 
@@ -179,15 +185,25 @@ k6 run k6/scenarios/load.js \
   -e ADMIN_EMAIL=k6@staging.test -e ADMIN_PASSWORD='K6staging!2026'
 ```
 
-**Para desmontarlo** (la branch consume del plan gratuito de Neon, 0.5 GB
-compartidos con producción):
+**Para desmontarlo cuando acabes de medir** — hazlo, no lo dejes ahí: la branch
+consume del plan gratuito de Neon (0.5 GB compartidos con producción) y el entorno
+tiene los limitadores desactivados.
 
 ```bash
-# Borrar la branch de Neon y el proyecto de Vercel
+# 1. Borrar la branch de Neon (saca el <branch-id> de /branches)
 curl -X DELETE -H "Authorization: Bearer $NEON_API_KEY" \
-  https://console.neon.tech/api/v2/projects/noisy-fog-06869960/branches/br-young-block-aiuf55zo
-npx vercel project rm cmms-backend-staging
+  https://console.neon.tech/api/v2/projects/noisy-fog-06869960/branches/<branch-id>
+
+# 2. Borrar el proyecto de Vercel (el CLI pide confirmación interactiva; por API no)
+curl -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" \
+  "https://api.vercel.com/v9/projects/cmms-backend-staging?teamId=<team-id>"
+
+# 3. Restos locales
+rm -rf backend/.vercel backend/.env.local backend/.staging.env
 ```
+
+Y **revoca la `NEON_API_KEY`** si no la vas a reutilizar: da acceso a toda la cuenta
+de Neon, producción incluida.
 
 ## Los dos cuellos de botella conocidos
 
